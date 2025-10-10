@@ -255,6 +255,13 @@ async function deleteVideo(id) {
 async function submitVideoForm(e) {
   e.preventDefault();
 
+  // 确保 WebSocket 已连接
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    console.warn('⚠️  WebSocket 未连接，尝试重新连接...');
+    connectWebSocket();
+    await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒连接
+  }
+
   const form = document.getElementById('videoForm');
   const formData = new FormData(form);
 
@@ -295,6 +302,9 @@ async function submitVideoForm(e) {
           document.getElementById('elapsedTime').textContent = `${elapsed}秒`;
         }, 1000);
 
+        // 启动轮询（作为WebSocket的备份）
+        startProgressPolling(currentVideoId);
+
         showToast('视频生成任务已启动', 'success');
       }
     }
@@ -304,6 +314,54 @@ async function submitVideoForm(e) {
     submitBtn.disabled = false;
     submitBtn.innerHTML = '🚀 生成视频';
   }
+}
+
+// 轮询进度（WebSocket备份方案）
+let progressPollingInterval = null;
+function startProgressPolling(videoId) {
+  console.log(`🔄 启动进度轮询（videoId: ${videoId}）`);
+  
+  // 清除旧的轮询
+  if (progressPollingInterval) {
+    clearInterval(progressPollingInterval);
+  }
+
+  // 每2秒轮询一次
+  progressPollingInterval = setInterval(async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/videos/${videoId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        const video = data.data;
+        console.log(`📊 轮询进度: ${video.generation_progress}%, 状态: ${video.generation_status}`);
+
+        // 更新进度显示
+        const progressText = document.getElementById('progressText');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressBar = document.getElementById('progressBar');
+
+        progressText.textContent = `生成中... ${video.generation_status}`;
+        progressPercent.textContent = `${video.generation_progress}%`;
+        progressBar.style.width = `${video.generation_progress}%`;
+
+        // 如果完成或失败，停止轮询
+        if (video.generation_status === 'completed') {
+          clearInterval(progressPollingInterval);
+          clearInterval(generationTimer);
+          showGenerationReport(video);
+        } else if (video.generation_status === 'failed') {
+          clearInterval(progressPollingInterval);
+          clearInterval(generationTimer);
+          progressText.textContent = '生成失败：' + (video.error_message || '未知错误');
+          progressBar.style.backgroundColor = '#dc3545';
+          showToast('视频生成失败', 'error');
+        }
+      }
+    } catch (error) {
+      console.error('轮询进度失败:', error);
+    }
+  }, 2000);
 }
 
 async function exportVideos(format) {

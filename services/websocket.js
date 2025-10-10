@@ -77,6 +77,8 @@ class WebSocketServer {
     });
 
     let sentCount = 0;
+    let totalClients = this.clients.size;
+    
     this.clients.forEach((client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(message);
@@ -85,7 +87,9 @@ class WebSocketServer {
     });
 
     if (sentCount > 0) {
-      console.log(`📤 广播消息给 ${sentCount} 个客户端:`, data.type);
+      console.log(`📤 广播消息给 ${sentCount}/${totalClients} 个客户端:`, data.type);
+    } else {
+      console.warn(`⚠️  无法广播消息（没有连接的客户端）: ${data.type}, 总客户端数: ${totalClients}`);
     }
   }
 

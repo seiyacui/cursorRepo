@@ -386,12 +386,16 @@ class VideoGenerator {
 
   // WebSocket 广播进度
   broadcastProgress(videoId, progressData) {
+    console.log(`📡 [${videoId}] 尝试广播进度: ${progressData.progress}%, wsServer存在: ${!!this.wsServer}`);
     if (this.wsServer) {
+      console.log(`📤 [${videoId}] 发送WebSocket消息...`);
       this.wsServer.broadcast({
         type: 'generation_progress',
         videoId,
         data: progressData
       });
+    } else {
+      console.warn(`⚠️  [${videoId}] WebSocket服务器未初始化，无法广播进度`);
     }
   }
 
