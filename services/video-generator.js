@@ -352,86 +352,94 @@ class VideoGenerator {
   applyAnimation(command, animation, duration) {
     console.log(`🎬 应用动画效果: ${animation}`);
     
+    // 动画时长（秒）
+    const animDuration = Math.min(1.5, duration * 0.3);
+    
     switch (animation) {
       case 'fade':
         // 淡入淡出效果
         const fadeInDuration = Math.min(1, duration * 0.2);
         const fadeOutStart = Math.max(0, duration - 1);
-        console.log(`  - 淡入: 0s-${fadeInDuration}s, 淡出: ${fadeOutStart}s-${duration}s`);
+        console.log(`  ✅ 淡入淡出: 淡入${fadeInDuration}s, 淡出从${fadeOutStart}s开始`);
         command.videoFilters(
           `fade=t=in:st=0:d=${fadeInDuration},fade=t=out:st=${fadeOutStart}:d=1`
         );
         break;
 
       case 'slide_left':
-        // 从右向左滑入
-        console.log(`  - 从右向左滑入`);
-        command.videoFilters(
-          `crop=iw:ih:iw*(1-t/${Math.min(1.5, duration)}):0,pad=iw/(1-min(t/${Math.min(1.5, duration)},1)):ih:(iw/(1-min(t/${Math.min(1.5, duration)},1))-iw)/2:0`
-        );
+        // 从右向左滑入 - 使用 overlay + 移动
+        console.log(`  ✅ 从右向左滑入 (${animDuration}秒)`);
+        command.videoFilters([
+          `pad=iw*2:ih:iw:0`,
+          `crop=iw/2:ih:'iw/2-iw/2*min(t/${animDuration}\\,1)':0`
+        ].join(','));
         break;
 
       case 'slide_right':
         // 从左向右滑入
-        console.log(`  - 从左向右滑入`);
-        command.videoFilters(
-          `crop=iw:ih:iw*t/${Math.min(1.5, duration)}:0,pad=iw/(min(t/${Math.min(1.5, duration)},1)):ih:0:0`
-        );
+        console.log(`  ✅ 从左向右滑入 (${animDuration}秒)`);
+        command.videoFilters([
+          `pad=iw*2:ih:0:0`,
+          `crop=iw/2:ih:'iw/2*min(t/${animDuration}\\,1)':0`
+        ].join(','));
         break;
 
       case 'slide_up':
         // 从下向上滑入
-        console.log(`  - 从下向上滑入`);
-        command.videoFilters(
-          `crop=iw:ih:0:ih*(1-t/${Math.min(1.5, duration)}),pad=iw:ih/(1-min(t/${Math.min(1.5, duration)},1)):0:(ih/(1-min(t/${Math.min(1.5, duration)},1))-ih)/2`
-        );
+        console.log(`  ✅ 从下向上滑入 (${animDuration}秒)`);
+        command.videoFilters([
+          `pad=iw:ih*2:0:ih`,
+          `crop=iw:ih/2:0:'ih/2-ih/2*min(t/${animDuration}\\,1)'`
+        ].join(','));
         break;
 
       case 'slide_down':
         // 从上向下滑入
-        console.log(`  - 从上向下滑入`);
-        command.videoFilters(
-          `crop=iw:ih:0:ih*t/${Math.min(1.5, duration)},pad=iw:ih/(min(t/${Math.min(1.5, duration)},1)):0:0`
-        );
+        console.log(`  ✅ 从上向下滑入 (${animDuration}秒)`);
+        command.videoFilters([
+          `pad=iw:ih*2:0:0`,
+          `crop=iw:ih/2:0:'ih/2*min(t/${animDuration}\\,1)'`
+        ].join(','));
         break;
 
       case 'zoom_in':
         // 缩放效果：从小放大
-        console.log(`  - 从小放大`);
-        const zoomDuration = Math.min(2, duration);
+        console.log(`  ✅ 放大效果 (从0.5倍到1.0倍)`);
+        const frames = Math.floor(duration * 25); // 25fps
         command.videoFilters(
-          `zoompan=z='min(zoom+0.0015,1.5)':d=${duration * 25}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080`
+          `zoompan=z='0.5+0.5*min(on/${frames}\\,1)':d=${frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=25`
         );
         break;
 
       case 'zoom_out':
         // 缩放效果：从大缩小
-        console.log(`  - 从大缩小`);
+        console.log(`  ✅ 缩小效果 (从1.5倍到1.0倍)`);
+        const framesOut = Math.floor(duration * 25);
         command.videoFilters(
-          `zoompan=z='if(lte(zoom,1.0),1.5,max(1.0,zoom-0.0015))':d=${duration * 25}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080`
+          `zoompan=z='1.5-0.5*min(on/${framesOut}\\,1)':d=${framesOut}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=25`
         );
         break;
 
       case 'rotate':
-        // 旋转效果
-        console.log(`  - 旋转效果`);
+        // 旋转效果 - 简化版本，只旋转一圈
+        console.log(`  ✅ 旋转效果 (360度)`);
         command.videoFilters(
-          `rotate=a='2*PI*t/${duration}':c=none:ow=rotw(2*PI*t/${duration}):oh=roth(2*PI*t/${duration})`
+          `rotate='2*PI*t/${duration}':c=black:ow='hypot(iw\\,ih)':oh=ow`
         );
         break;
 
       case 'bounce':
-        // 弹跳效果
-        console.log(`  - 弹跳效果`);
+        // 弹跳效果 - 使用简单的上下移动
+        console.log(`  ✅ 弹跳效果`);
         command.videoFilters(
-          `pad=iw:ih+200:0:100,crop=iw:ih:0:'abs(sin(4*PI*t/${duration})*100)'`
+          `pad=iw:ih+100:0:50,crop=iw:ih:0:'50-40*sin(8*PI*t/${duration})'`
         );
         break;
 
       case 'none':
       default:
         // 无动画，不添加滤镜
-        console.log(`  - 无动画`);
+        console.log(`  ✅ 无动画`);
         break;
     }
   }
