@@ -44,20 +44,33 @@ class VideoGenerator {
       await db.videos.updateStatus(videoId, 'generating', 0);
       this.broadcastProgress(videoId, { status: 'generating', progress: 0 });
 
-      // 1. 注册自定义字体（如果有）
+      // 1. 注册自定义字体（如果有且用户选择了custom）
       console.log(`🔤 [${videoId}] 检查自定义字体...`);
-      if (video.custom_font && fsSync.existsSync(video.custom_font)) {
+      console.log(`🔤 [${videoId}] font_family设置: ${video.font_family}`);
+      console.log(`🔤 [${videoId}] custom_font路径: ${video.custom_font}`);
+      
+      if (video.font_family === 'custom' && video.custom_font && fsSync.existsSync(video.custom_font)) {
         try {
           console.log(`🔤 [${videoId}] 注册自定义字体: ${video.custom_font}`);
-          registerFont(video.custom_font, { family: 'CustomFont' });
-          video.font_family = 'CustomFont';
+          const customFontName = 'CustomFont_' + Date.now();
+          registerFont(video.custom_font, { family: customFontName });
+          video.customFontFamily = customFontName;
+          console.log(`✅ [${videoId}] 自定义字体注册成功: ${customFontName}`);
         } catch (error) {
           console.error(`❌ [${videoId}] 注册自定义字体失败:`, error);
+          console.error(`❌ [${videoId}] 错误详情:`, error.stack);
+          video.font_family = 'Arial';  // 回退到默认字体
+        }
+      } else {
+        if (video.font_family === 'custom') {
+          console.warn(`⚠️ [${videoId}] 选择了自定义字体但文件不存在，使用默认字体`);
+          video.font_family = 'Arial';
         }
       }
 
       // 2. 生成文本图像帧
       console.log(`🖼️  [${videoId}] 开始生成文本图像...`);
+      console.log(`🖼️  [${videoId}] 使用字体: ${video.customFontFamily || video.font_family || 'Arial'}`);
       await this.updateProgress(videoId, 10, '生成文本图像...');
       const textImagePath = await this.generateTextImage(video);
       console.log(`✅ [${videoId}] 文本图像生成成功: ${textImagePath}`);
@@ -170,18 +183,25 @@ class VideoGenerator {
 
     // 2. 设置文本样式
     const fontSize = video.font_size || 48;
-    let fontFamily = video.font_family || 'Arial';
+    let fontFamily = 'Arial';  // 默认字体
     
-    // 如果选择了自定义字体且有customFontFamily参数，使用自定义字体
-    if (video.font_family === 'custom' && video.customFontFamily) {
+    // 如果有自定义字体，优先使用
+    if (video.customFontFamily) {
       fontFamily = video.customFontFamily;
       console.log(`🎨 使用自定义字体: ${fontFamily}`);
+    } else if (video.font_family && video.font_family !== 'custom') {
+      fontFamily = video.font_family;
+      console.log(`🎨 使用系统字体: ${fontFamily}`);
+    } else {
+      console.log(`🎨 使用默认字体: ${fontFamily}`);
     }
     
-    ctx.font = `${fontSize}px ${fontFamily}`;
+    ctx.font = `${fontSize}px "${fontFamily}"`;
     ctx.fillStyle = video.font_color || '#FFFFFF';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    
+    console.log(`📝 Canvas字体设置: ${ctx.font}`);
 
     // 3. 计算文本区域
     const marginTop = video.text_margin_top || 100;

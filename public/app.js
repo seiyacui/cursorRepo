@@ -539,7 +539,7 @@ function updatePreview() {
   const textContent = document.getElementById('textContent').value || '预览文本';
   const backgroundColor = document.getElementById('backgroundImage').files.length > 0 ? 
     '#888' : document.getElementById('backgroundColor').value;
-  const fontFamily = document.getElementById('fontFamily').value;
+  let fontFamily = document.getElementById('fontFamily').value;
   const fontSize = document.getElementById('fontSize').value + 'px';
   const fontColor = document.getElementById('fontColor').value;
   const fontBackgroundColor = document.getElementById('transparentBg').checked ? 
@@ -549,6 +549,12 @@ function updatePreview() {
   const marginBottom = document.getElementById('marginBottom').value + 'px';
   const marginLeft = document.getElementById('marginLeft').value + 'px';
   const marginRight = document.getElementById('marginRight').value + 'px';
+
+  // 如果选择了自定义字体，使用已加载的字体
+  if (fontFamily === 'custom' && window.customPreviewFont) {
+    fontFamily = window.customPreviewFont;
+    console.log(`🎨 预览使用自定义字体: ${fontFamily}`);
+  }
 
   previewCanvas.style.backgroundColor = backgroundColor;
   previewCanvas.style.fontFamily = fontFamily;
@@ -651,6 +657,7 @@ function clearFile(inputId) {
 // 添加自定义字体到列表
 function addCustomFontToList(fontFileName) {
   const fontSelect = document.getElementById('fontFamily');
+  const fileInput = document.getElementById('customFont');
   
   // 移除旧的自定义字体选项
   removeCustomFontFromList();
@@ -663,8 +670,46 @@ function addCustomFontToList(fontFileName) {
   option.selected = true;  // 自动选中
   fontSelect.appendChild(option);
   
+  // 为预览加载自定义字体
+  if (fileInput.files[0]) {
+    loadCustomFontForPreview(fileInput.files[0], fontFileName);
+  }
+  
   console.log(`✅ 已添加自定义字体到列表: ${fontFileName}`);
   showToast(`自定义字体已添加: ${fontFileName}`, 'success');
+}
+
+// 为预览加载自定义字体
+function loadCustomFontForPreview(fontFile, fontFileName) {
+  // 使用 FileReader 读取字体文件
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    const fontData = e.target.result;
+    const fontName = 'CustomFont_' + Date.now();
+    
+    // 创建 @font-face 规则
+    const fontFace = new FontFace(fontName, fontData);
+    
+    fontFace.load().then(function(loadedFace) {
+      // 添加到文档
+      document.fonts.add(loadedFace);
+      
+      // 保存字体名称供预览使用
+      window.customPreviewFont = fontName;
+      
+      console.log(`✅ 预览字体已加载: ${fontName}`);
+      showToast(`预览字体已加载: ${fontFileName}`, 'success');
+      
+      // 更新预览
+      updatePreview();
+    }).catch(function(error) {
+      console.error('❌ 加载预览字体失败:', error);
+      showToast(`字体加载失败: ${error.message}`, 'error');
+    });
+  };
+  
+  reader.readAsArrayBuffer(fontFile);
 }
 
 // 从列表中移除自定义字体
