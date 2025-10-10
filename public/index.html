@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube 视频批量下载管理器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <h1>📹 YouTube 视频批量下载管理器</h1>
+      <p class="subtitle">批量下载、数据管理、多格式导出</p>
+    </header>
+
+    <!-- 下载配置区域 -->
+    <section class="download-section">
+      <h2>📥 下载配置</h2>
+      
+      <!-- URL 输入区 -->
+      <div class="form-group">
+        <label for="urlInput">视频地址列表 <span class="required">*</span></label>
+        <textarea 
+          id="urlInput" 
+          placeholder="请输入YouTube视频地址，每行一个&#10;例如：&#10;https://www.youtube.com/watch?v=xxxxx&#10;https://www.youtube.com/watch?v=yyyyy"
+          rows="6"
+        ></textarea>
+        <div class="hint">支持批量输入，每行一个URL</div>
+      </div>
+
+      <div class="form-row">
+        <!-- 视频格式选择 -->
+        <div class="form-group">
+          <label for="videoFormat">视频格式</label>
+          <select id="videoFormat">
+            <option value="mp4" selected>MP4 (推荐)</option>
+            <option value="mkv">MKV</option>
+            <option value="webm">WebM</option>
+          </select>
+        </div>
+
+        <!-- 视频质量选择 -->
+        <div class="form-group">
+          <label for="videoQuality">视频质量</label>
+          <select id="videoQuality">
+            <option value="best" selected>最佳质量</option>
+            <option value="1080p">1080p</option>
+            <option value="720p">720p</option>
+            <option value="480p">480p</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <!-- 音频下载选项 -->
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="downloadAudio">
+            <span>同时下载音频</span>
+          </label>
+        </div>
+
+        <!-- 音频格式选择 -->
+        <div class="form-group">
+          <label for="audioFormat">音频格式</label>
+          <select id="audioFormat" disabled>
+            <option value="mp3" selected>MP3</option>
+            <option value="aac">AAC</option>
+            <option value="wav">WAV</option>
+            <option value="best">最佳音质</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 下载按钮 -->
+      <button id="downloadBtn" class="btn btn-primary btn-large">
+        🚀 开始下载
+      </button>
+    </section>
+
+    <!-- 实时进度区域 -->
+    <section class="progress-section" id="progressSection" style="display: none;">
+      <h2>⏳ 下载进度</h2>
+      <div class="progress-container">
+        <div class="progress-header">
+          <span id="progressText">准备下载...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-stats">
+          <span>⏱️ 累计耗时: <strong id="elapsedTime">0秒</strong></span>
+          <span>✅ 已完成: <strong id="completedCount">0</strong></span>
+          <span>❌ 失败: <strong id="failedCount">0</strong></span>
+        </div>
+      </div>
+
+      <!-- 下载报告 -->
+      <div class="download-report" id="downloadReport" style="display: none;">
+        <h3>📊 下载报告</h3>
+        <div id="reportContent"></div>
+        <div class="report-actions">
+          <button class="btn btn-success" onclick="showDownloadLinks()">📂 查看下载链接</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 搜索和过滤区域 -->
+    <section class="search-section">
+      <h2>🔍 搜索与过滤</h2>
+      <div class="search-controls">
+        <div class="form-row">
+          <div class="form-group flex-grow">
+            <input 
+              type="text" 
+              id="searchKeyword" 
+              placeholder="搜索关键字（标题、文件名、作者）"
+              class="search-input"
+            >
+          </div>
+          <div class="form-group">
+            <select id="statusFilter">
+              <option value="">所有状态</option>
+              <option value="completed">已完成</option>
+              <option value="downloading">下载中</option>
+              <option value="pending">等待中</option>
+              <option value="failed">失败</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <input type="date" id="startDate" placeholder="开始日期">
+          </div>
+          <div class="form-group">
+            <input type="date" id="endDate" placeholder="结束日期">
+          </div>
+          <div class="form-group">
+            <button id="searchBtn" class="btn btn-secondary">🔍 搜索</button>
+          </div>
+          <div class="form-group">
+            <button id="resetBtn" class="btn btn-outline">🔄 重置</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 视频列表区域 -->
+    <section class="list-section">
+      <div class="list-header">
+        <h2>📋 视频列表</h2>
+        <div class="list-actions">
+          <div class="export-group">
+            <label>导出格式:</label>
+            <select id="exportFormat">
+              <option value="html">HTML</option>
+              <option value="pdf">PDF</option>
+              <option value="markdown">Markdown</option>
+              <option value="png">PNG</option>
+            </select>
+            <button id="exportBtn" class="btn btn-info">📤 导出列表</button>
+          </div>
+          <button id="refreshBtn" class="btn btn-outline">🔄 刷新</button>
+        </div>
+      </div>
+
+      <!-- 统计信息 -->
+      <div class="stats-cards" id="statsCards">
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-info">
+            <div class="stat-value" id="totalCount">0</div>
+            <div class="stat-label">总数</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-value" id="completedStat">0</div>
+            <div class="stat-label">已完成</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-info">
+            <div class="stat-value" id="downloadingStat">0</div>
+            <div class="stat-label">下载中</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💾</div>
+          <div class="stat-info">
+            <div class="stat-value" id="totalSize">0 MB</div>
+            <div class="stat-label">总大小</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 视频表格 -->
+      <div class="table-container">
+        <table id="videoTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>文件名</th>
+              <th>视频格式</th>
+              <th>音频格式</th>
+              <th>时长</th>
+              <th>视频大小</th>
+              <th>音频大小</th>
+              <th>创建日期</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="videoTableBody">
+            <tr>
+              <td colspan="10" class="no-data">暂无数据</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 分页 -->
+      <div class="pagination" id="pagination" style="display: none;">
+        <button class="btn btn-sm" id="prevPage">上一页</button>
+        <span id="pageInfo">第 1 页 / 共 1 页</span>
+        <button class="btn btn-sm" id="nextPage">下一页</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- 下载链接模态框 -->
+  <div class="modal" id="downloadModal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📂 下载链接</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Toast 通知 -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
