@@ -24,38 +24,56 @@ class VideoGenerator {
 
   // 生成视频
   async generateVideo(videoId, options) {
+    console.log(`🎬 [${videoId}] 开始生成视频...`);
+    
     const video = await db.videos.getById(videoId);
     if (!video) {
       throw new Error('视频记录不存在');
     }
+    
+    console.log(`📋 [${videoId}] 视频信息:`, {
+      text_content: video.text_content.substring(0, 50),
+      background_music: video.background_music,
+      background_image: video.background_image,
+      slide_duration: video.slide_duration
+    });
 
     try {
       // 更新状态为生成中
+      console.log(`📊 [${videoId}] 更新状态为生成中...`);
       await db.videos.updateStatus(videoId, 'generating', 0);
       this.broadcastProgress(videoId, { status: 'generating', progress: 0 });
 
       // 1. 注册自定义字体（如果有）
+      console.log(`🔤 [${videoId}] 检查自定义字体...`);
       if (video.custom_font && fsSync.existsSync(video.custom_font)) {
         try {
+          console.log(`🔤 [${videoId}] 注册自定义字体: ${video.custom_font}`);
           registerFont(video.custom_font, { family: 'CustomFont' });
           video.font_family = 'CustomFont';
         } catch (error) {
-          console.error('注册自定义字体失败:', error);
+          console.error(`❌ [${videoId}] 注册自定义字体失败:`, error);
         }
       }
 
       // 2. 生成文本图像帧
+      console.log(`🖼️  [${videoId}] 开始生成文本图像...`);
       await this.updateProgress(videoId, 10, '生成文本图像...');
       const textImagePath = await this.generateTextImage(video);
+      console.log(`✅ [${videoId}] 文本图像生成成功: ${textImagePath}`);
 
       // 3. 获取音频时长
+      console.log(`🎵 [${videoId}] 开始分析音频: ${video.background_music}`);
       await this.updateProgress(videoId, 20, '分析音频...');
       const audioDuration = await this.getAudioDuration(video.background_music);
+      console.log(`✅ [${videoId}] 音频时长: ${audioDuration}秒`);
       
       // 计算实际视频时长（音频时长 vs 幻灯片时长）
       const videoDuration = Math.min(audioDuration, video.slide_duration);
+      console.log(`⏱️  [${videoId}] 视频时长: ${videoDuration}秒 (音频:${audioDuration}秒, 设定:${video.slide_duration}秒)`);
 
       // 4. 生成视频
+      console.log(`🎬 [${videoId}] 开始合成视频...`);
       await this.updateProgress(videoId, 30, '合成视频...');
       const videoPath = await this.createVideo(
         video,
@@ -64,9 +82,11 @@ class VideoGenerator {
         (progress) => {
           // 30-90% 的进度用于视频生成
           const overallProgress = 30 + Math.floor(progress * 0.6);
+          console.log(`📊 [${videoId}] FFmpeg进度: ${Math.floor(progress * 100)}%`);
           this.updateProgress(videoId, overallProgress, '正在合成视频...');
         }
       );
+      console.log(`✅ [${videoId}] 视频合成成功: ${videoPath}`);
 
       // 5. 获取视频文件信息
       await this.updateProgress(videoId, 90, '完成处理...');
@@ -111,18 +131,24 @@ class VideoGenerator {
 
   // 生成文本图像
   async generateTextImage(video) {
+    console.log(`🖼️  开始生成文本图像...`);
     const width = video.video_width || 1920;
     const height = video.video_height || 1080;
+    console.log(`📐 画布大小: ${width}x${height}`);
+    
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
     // 1. 绘制背景
     if (video.background_image && fsSync.existsSync(video.background_image)) {
       // 使用背景图片
+      console.log(`🖼️  加载背景图片: ${video.background_image}`);
       const image = await loadImage(video.background_image);
       ctx.drawImage(image, 0, 0, width, height);
+      console.log(`✅ 背景图片绘制完成`);
     } else {
       // 使用背景颜色
+      console.log(`🎨 使用背景颜色: ${video.background_color || '#000000'}`);
       ctx.fillStyle = video.background_color || '#000000';
       ctx.fillRect(0, 0, width, height);
     }
@@ -208,12 +234,16 @@ class VideoGenerator {
 
   // 获取音频时长
   getAudioDuration(audioPath) {
+    console.log(`🎵 获取音频时长: ${audioPath}`);
     return new Promise((resolve, reject) => {
       ffmpeg.ffprobe(audioPath, (err, metadata) => {
         if (err) {
+          console.error(`❌ FFprobe错误:`, err);
           reject(err);
         } else {
-          resolve(metadata.format.duration);
+          const duration = metadata.format.duration;
+          console.log(`✅ 音频时长: ${duration}秒`);
+          resolve(duration);
         }
       });
     });
@@ -221,14 +251,20 @@ class VideoGenerator {
 
   // 创建视频
   createVideo(video, textImagePath, duration, onProgress) {
+    console.log(`🎬 开始创建视频...`);
+    console.log(`📝 参数: 图像=${textImagePath}, 时长=${duration}秒`);
+    
     return new Promise((resolve, reject) => {
       const outputFilename = `video_${uuidv4()}.${video.video_format}`;
       const outputPath = path.join(this.outputPath, outputFilename);
+      console.log(`📁 输出路径: ${outputPath}`);
 
       // 构建ffmpeg命令
+      console.log(`🔧 构建FFmpeg命令...`);
       let command = ffmpeg();
 
       // 添加文本图像输入（循环）
+      console.log(`➕ 添加图像输入: ${textImagePath}`);
       command.input(textImagePath)
         .inputOptions([
           '-loop 1',
@@ -236,6 +272,7 @@ class VideoGenerator {
         ]);
 
       // 添加音频输入
+      console.log(`➕ 添加音频输入: ${video.background_music}`);
       command.input(video.background_music)
         .inputOptions([
           `-t ${duration}`
@@ -245,6 +282,8 @@ class VideoGenerator {
       const fps = video.video_fps || 30;
       const width = video.video_width || 1920;
       const height = video.video_height || 1080;
+      
+      console.log(`⚙️  输出设置: ${width}x${height} @ ${fps}fps, 格式=${video.video_format}`);
 
       command
         .outputOptions([
@@ -262,27 +301,43 @@ class VideoGenerator {
 
       // 应用文本动画效果
       const animation = video.text_animation || 'fade';
+      console.log(`🎨 应用动画效果: ${animation}`);
       this.applyAnimation(command, animation, duration);
+
+      // 标准错误输出（FFmpeg详细日志）
+      command.on('stderr', (stderrLine) => {
+        console.log(`[FFmpeg] ${stderrLine}`);
+      });
 
       // 进度回调
       command.on('progress', (progress) => {
         if (progress.percent) {
+          console.log(`📊 FFmpeg进度: ${progress.percent.toFixed(1)}%`);
           onProgress(progress.percent / 100);
         }
       });
 
       // 完成回调
       command.on('end', () => {
+        console.log(`✅ FFmpeg执行完成!`);
         resolve(outputPath);
       });
 
       // 错误回调
       command.on('error', (err) => {
+        console.error(`❌ FFmpeg错误:`, err);
         reject(new Error(`FFmpeg错误: ${err.message}`));
       });
 
       // 开始处理
-      command.run();
+      console.log(`▶️  启动FFmpeg进程...`);
+      try {
+        command.run();
+        console.log(`✅ FFmpeg命令已提交执行`);
+      } catch (error) {
+        console.error(`❌ 启动FFmpeg失败:`, error);
+        reject(error);
+      }
     });
   }
 
