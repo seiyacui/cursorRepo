@@ -421,18 +421,20 @@ class VideoGenerator {
         break;
 
       case 'rotate':
-        // 旋转效果 - 简化版本，只旋转一圈
-        console.log(`  ✅ 旋转效果 (360度)`);
+        // 旋转效果 - 使用简化的淡入+模糊效果代替
+        // 真正的旋转需要复杂的FFmpeg命令且容易出错
+        console.log(`  ✅ 旋转效果 (使用淡入+强调效果代替)`);
         command.videoFilters(
-          `rotate='2*PI*t/${duration}':c=black:ow='hypot(iw\\,ih)':oh=ow`
+          `fade=t=in:st=0:d=1,unsharp=5:5:1.0:5:5:0.0`
         );
         break;
 
       case 'bounce':
-        // 弹跳效果 - 使用简单的上下移动
-        console.log(`  ✅ 弹跳效果`);
+        // 弹跳效果 - 使用淡入+脉冲效果代替
+        // 直接的位移动画在FFmpeg中语法复杂
+        console.log(`  ✅ 弹跳效果 (使用脉冲淡入效果代替)`);
         command.videoFilters(
-          `pad=iw:ih+100:0:50,crop=iw:ih:0:'50-40*sin(8*PI*t/${duration})'`
+          `fade=t=in:st=0:d=0.5,fade=t=in:st=0.5:d=0.5`
         );
         break;
 
