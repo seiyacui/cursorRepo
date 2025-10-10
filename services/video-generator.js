@@ -99,7 +99,7 @@ class VideoGenerator {
       const videoStats = await fs.stat(videoPath);
       const videoFilename = path.basename(videoPath);
 
-      // 6. 更新数据库
+      // 6. 更新数据库为完成状态
       await db.videos.update(videoId, {
         video_path: videoPath,
         video_filename: videoFilename,
@@ -110,10 +110,19 @@ class VideoGenerator {
         generation_completed_at: new Date()
       });
 
+      console.log(`✅ [${videoId}] 数据库状态已更新为 completed`);
+
       // 7. 清理临时文件
       await this.cleanupTempFiles([textImagePath]);
 
-      await this.updateProgress(videoId, 100, '生成完成！');
+      // 8. 广播完成消息（不调用updateProgress，避免覆盖状态）
+      this.broadcastProgress(videoId, {
+        status: 'completed',
+        progress: 100,
+        message: '生成完成！'
+      });
+      
+      console.log(`📡 [${videoId}] 已广播完成状态: completed, 100%`);
 
       return {
         success: true,
