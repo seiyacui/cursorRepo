@@ -44,6 +44,25 @@ class WebSocketHandler {
       client.send(JSON.stringify(data));
     }
   }
+
+  // Close all connections and server
+  close() {
+    console.log('Closing WebSocket server...');
+    this.clients.forEach(client => {
+      try {
+        client.close();
+      } catch (error) {
+        console.error('Error closing WebSocket client:', error);
+      }
+    });
+    this.clients.clear();
+    
+    if (this.wss) {
+      this.wss.close(() => {
+        console.log('WebSocket server closed');
+      });
+    }
+  }
 }
 
 module.exports = WebSocketHandler;

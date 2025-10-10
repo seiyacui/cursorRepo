@@ -10,11 +10,25 @@ class DownloaderService {
     this.downloadDir = process.env.DOWNLOAD_DIR || './downloads';
     this.ytDlpPath = process.env.YT_DLP_PATH || 'yt-dlp';
     this.downloadCounter = 0;
+    this.activeProcesses = new Set(); // Track active download processes
     
     // Ensure download directory exists
     if (!fs.existsSync(this.downloadDir)) {
       fs.mkdirSync(this.downloadDir, { recursive: true });
     }
+  }
+
+  // Terminate all active download processes
+  terminateAll() {
+    console.log(`Terminating ${this.activeProcesses.size} active download processes...`);
+    this.activeProcesses.forEach(proc => {
+      try {
+        proc.kill('SIGTERM');
+      } catch (error) {
+        console.error('Error terminating process:', error);
+      }
+    });
+    this.activeProcesses.clear();
   }
 
   // Extract YouTube video ID from URL
@@ -193,10 +207,12 @@ class DownloaderService {
   // Execute yt-dlp command
   executeYtDlp(args, videoId, type) {
     return new Promise((resolve, reject) => {
-      const process = spawn(this.ytDlpPath, args);
+      const proc = spawn(this.ytDlpPath, args);
+      this.activeProcesses.add(proc); // Track this process
+      
       let stderr = '';
 
-      process.stdout.on('data', (data) => {
+      proc.stdout.on('data', (data) => {
         const output = data.toString();
         console.log(output);
 
@@ -230,11 +246,12 @@ class DownloaderService {
         });
       });
 
-      process.stderr.on('data', (data) => {
+      proc.stderr.on('data', (data) => {
         stderr += data.toString();
       });
 
-      process.on('close', (code) => {
+      proc.on('close', (code) => {
+        this.activeProcesses.delete(proc); // Remove from tracking
         if (code === 0) {
           resolve({ success: true });
         } else {
@@ -242,7 +259,8 @@ class DownloaderService {
         }
       });
 
-      process.on('error', (error) => {
+      proc.on('error', (error) => {
+        this.activeProcesses.delete(proc); // Remove from tracking
         reject(new Error(`Failed to start yt-dlp: ${error.message}`));
       });
     });
@@ -252,19 +270,22 @@ class DownloaderService {
   async getVideoInfo(url) {
     return new Promise((resolve, reject) => {
       const args = ['--dump-json', '--no-playlist', url];
-      const process = spawn(this.ytDlpPath, args);
+      const proc = spawn(this.ytDlpPath, args);
+      this.activeProcesses.add(proc); // Track this process
+      
       let stdout = '';
       let stderr = '';
 
-      process.stdout.on('data', (data) => {
+      proc.stdout.on('data', (data) => {
         stdout += data.toString();
       });
 
-      process.stderr.on('data', (data) => {
+      proc.stderr.on('data', (data) => {
         stderr += data.toString();
       });
 
-      process.on('close', (code) => {
+      proc.on('close', (code) => {
+        this.activeProcesses.delete(proc); // Remove from tracking
         if (code === 0) {
           try {
             const info = JSON.parse(stdout);
@@ -281,6 +302,11 @@ class DownloaderService {
         } else {
           reject(new Error(stderr || `Failed to get video info, exit code: ${code}`));
         }
+      });
+
+      proc.on('error', (error) => {
+        this.activeProcesses.delete(proc); // Remove from tracking
+        reject(error);
       });
     });
   }

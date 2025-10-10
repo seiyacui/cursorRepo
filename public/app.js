@@ -14,6 +14,10 @@ class YouTubeDownloader {
     this.pageSize = 20;
     this.totalPages = 0;
     
+    // Sorting
+    this.sortColumn = null;
+    this.sortDirection = 'asc';
+    
     this.init();
   }
 
@@ -205,6 +209,14 @@ class YouTubeDownloader {
     document.getElementById('lastPageBtn').addEventListener('click', () => {
       this.currentPage = this.totalPages;
       this.renderVideoTable();
+    });
+
+    // Sortable column headers
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const sortColumn = th.getAttribute('data-sort');
+        this.sortVideos(sortColumn);
+      });
     });
   }
 
@@ -457,6 +469,10 @@ class YouTubeDownloader {
         this.videos = result.videos;
         this.filteredVideos = result.videos;
         this.currentPage = 1;
+        // Apply current sorting if any
+        if (this.sortColumn) {
+          this.applySorting();
+        }
         this.renderVideoTable();
       } else {
         throw new Error(result.error || '加载视频列表失败');
@@ -467,11 +483,82 @@ class YouTubeDownloader {
     }
   }
 
+  // Sort videos by column
+  sortVideos(column) {
+    // Toggle direction if same column, otherwise set to ascending
+    if (this.sortColumn === column) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = 'asc';
+    }
+
+    this.applySorting();
+    this.currentPage = 1; // Reset to first page after sorting
+    this.renderVideoTable();
+  }
+
+  // Apply sorting to filtered videos
+  applySorting() {
+    if (!this.sortColumn) return;
+
+    this.filteredVideos.sort((a, b) => {
+      let aVal = a[this.sortColumn];
+      let bVal = b[this.sortColumn];
+
+      // Handle null/undefined values
+      if (aVal === null || aVal === undefined) aVal = '';
+      if (bVal === null || bVal === undefined) bVal = '';
+
+      // Special handling for different data types
+      if (this.sortColumn === 'duration' || this.sortColumn === 'video_size' || this.sortColumn === 'audio_size') {
+        // Numeric comparison
+        aVal = Number(aVal) || 0;
+        bVal = Number(bVal) || 0;
+      } else if (this.sortColumn === 'created_at') {
+        // Date comparison
+        aVal = new Date(aVal).getTime() || 0;
+        bVal = new Date(bVal).getTime() || 0;
+      } else if (this.sortColumn === 'id') {
+        // ID comparison
+        aVal = Number(aVal) || 0;
+        bVal = Number(bVal) || 0;
+      } else {
+        // String comparison (case insensitive)
+        aVal = String(aVal).toLowerCase();
+        bVal = String(bVal).toLowerCase();
+      }
+
+      if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // Update sort indicators in table headers
+  updateSortIndicators() {
+    // Remove all sort classes
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.classList.remove('asc', 'desc');
+    });
+
+    // Add sort class to current column
+    if (this.sortColumn) {
+      const th = document.querySelector(`th[data-sort="${this.sortColumn}"]`);
+      if (th) {
+        th.classList.add(this.sortDirection);
+      }
+    }
+  }
+
   // Render video table
   renderVideoTable() {
     const tbody = document.getElementById('videoTableBody');
     const recordCount = document.getElementById('recordCount');
     const pageInfo = document.getElementById('pageInfo');
+
+    // Update sort indicators
+    this.updateSortIndicators();
 
     if (this.filteredVideos.length === 0) {
       tbody.innerHTML = '<tr><td colspan="12" class="no-data">暂无数据</td></tr>';

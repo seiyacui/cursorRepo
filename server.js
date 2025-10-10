@@ -343,18 +343,56 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, closing server gracefully...');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-});
+let isShuttingDown = false;
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received, closing server gracefully...');
-  server.close(() => {
-    console.log('Server closed');
+async function gracefulShutdown(signal) {
+  if (isShuttingDown) {
+    console.log('Shutdown already in progress...');
+    return;
+  }
+  
+  isShuttingDown = true;
+  console.log(`\n${signal} received, closing server gracefully...`);
+  
+  // Set a timeout to force exit if graceful shutdown takes too long
+  const forceExitTimer = setTimeout(() => {
+    console.error('❌ Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000); // 10 seconds timeout
+  
+  try {
+    // 1. Close HTTP server (stop accepting new connections)
+    console.log('1/4 Closing HTTP server...');
+    await new Promise((resolve) => {
+      server.close(() => {
+        console.log('✅ HTTP server closed');
+        resolve();
+      });
+    });
+    
+    // 2. Close all WebSocket connections
+    console.log('2/4 Closing WebSocket connections...');
+    wsHandler.close();
+    
+    // 3. Close database connections
+    console.log('3/4 Closing database connections...');
+    await db.pool.end();
+    console.log('✅ Database connections closed');
+    
+    // 4. Terminate any running download processes
+    console.log('4/4 Terminating download processes...');
+    downloaderService.terminateAll();
+    console.log('✅ Download processes terminated');
+    
+    clearTimeout(forceExitTimer);
+    console.log('✅ Graceful shutdown complete');
     process.exit(0);
-  });
-});
+  } catch (error) {
+    console.error('❌ Error during shutdown:', error);
+    clearTimeout(forceExitTimer);
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
