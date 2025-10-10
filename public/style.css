@@ -226,17 +226,7 @@ body {
   border-radius: 4px;
   font-size: 13px;
   color: var(--text-light);
-}
-
-.form-group label + input[type="file"] + .file-name {
-  cursor: pointer;
-  background: var(--primary-color);
-  color: var(--white);
-  transition: background 0.3s;
-}
-
-.form-group label + input[type="file"] + .file-name:hover {
-  background: var(--primary-dark);
+  font-weight: 500;
 }
 
 .form-row {
