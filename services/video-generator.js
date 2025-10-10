@@ -294,10 +294,30 @@ class VideoGenerator {
           `-t ${duration}`    // 但只取指定时长
         ]);
 
-      // 设置输出选项
+      // 根据分辨率设置输出尺寸
+      let width, height;
+      switch(video.video_resolution || '1080p') {
+        case '4k':
+          width = 3840;
+          height = 2160;
+          break;
+        case '3k':
+          width = 3200;
+          height = 1800;
+          break;
+        case '2k':
+          width = 2560;
+          height = 1440;
+          break;
+        case '1080p':
+        default:
+          width = 1920;
+          height = 1080;
+          break;
+      }
+      
       const fps = video.video_fps || 30;
-      const width = video.video_width || 1920;
-      const height = video.video_height || 1080;
+      console.log(`📺 分辨率设置: ${video.video_resolution || '1080p'} (${width}x${height})`);
       
       console.log(`⚙️  输出设置: ${width}x${height} @ ${fps}fps, 格式=${video.video_format}`);
 

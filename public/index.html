@@ -181,6 +181,19 @@
               </div>
 
               <div class="form-group">
+                <label for="videoResolution">视频清晰度</label>
+                <select id="videoResolution" name="video_resolution">
+                  <option value="1080p" selected>1080P (1920x1080)</option>
+                  <option value="2k">2K (2560x1440)</option>
+                  <option value="3k">3K (3200x1800)</option>
+                  <option value="4k">4K (3840x2160)</option>
+                </select>
+                <small style="color: #666; font-size: 0.9em; margin-top: 4px; display: block;">
+                  💡 提示: 高清晰度会增加渲染时间和文件大小
+                </small>
+              </div>
+
+              <div class="form-group">
                 <label for="videoFormat">视频格式</label>
                 <select id="videoFormat" name="video_format">
                   <option value="mp4">MP4</option>
