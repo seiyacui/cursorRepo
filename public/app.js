@@ -619,6 +619,66 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// ==================== File Management ====================
+// 清除文件选择
+function clearFile(inputId) {
+  const input = document.getElementById(inputId);
+  const fileNameId = inputId === 'backgroundMusic' ? 'musicFileName' :
+                     inputId === 'backgroundImage' ? 'imageFileName' :
+                     inputId === 'customFont' ? 'fontFileName' : null;
+  const btnId = inputId === 'backgroundMusic' ? 'btnClearMusic' :
+                inputId === 'backgroundImage' ? 'btnClearImage' :
+                inputId === 'customFont' ? 'btnClearFont' : null;
+  
+  if (input) {
+    input.value = '';
+    if (fileNameId) {
+      document.getElementById(fileNameId).textContent = '未选择文件';
+    }
+    if (btnId) {
+      document.getElementById(btnId).style.display = 'none';
+    }
+    
+    // 如果是字体文件，从列表中移除
+    if (inputId === 'customFont') {
+      removeCustomFontFromList();
+    }
+    
+    console.log(`🗑️ 已清除文件: ${inputId}`);
+  }
+}
+
+// 添加自定义字体到列表
+function addCustomFontToList(fontFileName) {
+  const fontSelect = document.getElementById('fontFamily');
+  
+  // 移除旧的自定义字体选项
+  removeCustomFontFromList();
+  
+  // 添加新的自定义字体选项
+  const option = document.createElement('option');
+  option.value = 'custom';
+  option.textContent = `自定义字体 (${fontFileName})`;
+  option.setAttribute('data-custom', 'true');
+  option.selected = true;  // 自动选中
+  fontSelect.appendChild(option);
+  
+  console.log(`✅ 已添加自定义字体到列表: ${fontFileName}`);
+  showToast(`自定义字体已添加: ${fontFileName}`, 'success');
+}
+
+// 从列表中移除自定义字体
+function removeCustomFontFromList() {
+  const fontSelect = document.getElementById('fontFamily');
+  const customOptions = fontSelect.querySelectorAll('[data-custom="true"]');
+  customOptions.forEach(option => option.remove());
+  
+  // 选中默认字体
+  if (fontSelect.options.length > 0) {
+    fontSelect.selectedIndex = 0;
+  }
+}
+
 // ==================== Utility Functions ====================
 function formatFileSize(bytes) {
   if (!bytes) return '0 B';

@@ -89,8 +89,14 @@
 
               <div class="form-group">
                 <label for="customFont">自定义字体（可选）</label>
-                <input type="file" id="customFont" name="custom_font" accept=".ttf,.otf,.woff,.woff2">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="file" id="customFont" name="custom_font" accept=".ttf,.otf,.woff,.woff2" style="flex: 1;">
+                  <button type="button" class="btn btn-danger" id="btnClearFont" onclick="clearFile('customFont')" style="display: none; padding: 8px 15px;">🗑️ 删除</button>
+                </div>
                 <span class="file-name" id="fontFileName">未选择文件</span>
+                <small style="color: #666; font-size: 0.9em; margin-top: 4px; display: block;">
+                  💡 上传后会自动添加到字体类型列表中
+                </small>
               </div>
             </div>
 

@@ -170,7 +170,14 @@ class VideoGenerator {
 
     // 2. 设置文本样式
     const fontSize = video.font_size || 48;
-    const fontFamily = video.font_family || 'Arial';
+    let fontFamily = video.font_family || 'Arial';
+    
+    // 如果选择了自定义字体且有customFontFamily参数，使用自定义字体
+    if (video.font_family === 'custom' && video.customFontFamily) {
+      fontFamily = video.customFontFamily;
+      console.log(`🎨 使用自定义字体: ${fontFamily}`);
+    }
+    
     ctx.font = `${fontSize}px ${fontFamily}`;
     ctx.fillStyle = video.font_color || '#FFFFFF';
     ctx.textAlign = 'center';
