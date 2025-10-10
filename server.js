@@ -222,7 +222,7 @@ app.post('/api/export', async (req, res) => {
   try {
     const { format, videoIds } = req.body;
 
-    if (!format || !['html', 'pdf', 'markdown', 'png'].includes(format)) {
+    if (!format || !['html', 'pdf', 'markdown', 'png', 'excel'].includes(format)) {
       return res.status(400).json({ error: 'Invalid export format' });
     }
 
@@ -258,6 +258,9 @@ app.post('/api/export', async (req, res) => {
         break;
       case 'png':
         exportResult = await exporterService.exportPNG(videos);
+        break;
+      case 'excel':
+        exportResult = await exporterService.exportExcel(videos);
         break;
     }
 

@@ -9,10 +9,33 @@ class DownloaderService {
     this.wsHandler = wsHandler;
     this.downloadDir = process.env.DOWNLOAD_DIR || './downloads';
     this.ytDlpPath = process.env.YT_DLP_PATH || 'yt-dlp';
+    this.downloadCounter = 0;
     
     // Ensure download directory exists
     if (!fs.existsSync(this.downloadDir)) {
       fs.mkdirSync(this.downloadDir, { recursive: true });
+    }
+  }
+
+  // Extract YouTube video ID from URL
+  extractVideoId(url) {
+    try {
+      const urlObj = new URL(url);
+      
+      // Handle youtu.be format
+      if (urlObj.hostname === 'youtu.be') {
+        return urlObj.pathname.slice(1).split('?')[0];
+      }
+      
+      // Handle youtube.com format
+      if (urlObj.hostname.includes('youtube.com')) {
+        return urlObj.searchParams.get('v');
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to extract video ID:', error);
+      return null;
     }
   }
 
@@ -57,8 +80,13 @@ class DownloaderService {
         [videoInfo.title, videoInfo.duration, videoInfo.thumbnail, videoId]
       );
 
-      // Build yt-dlp command for video
-      const videoOutputPath = path.join(this.downloadDir, `${videoId}_video.%(ext)s`);
+      // Extract YouTube video ID for filename
+      const youtubeVideoId = this.extractVideoId(url) || `video_${videoId}`;
+      this.downloadCounter++;
+      const counter = this.downloadCounter;
+
+      // Build yt-dlp command for video with new naming format
+      const videoOutputPath = path.join(this.downloadDir, `${counter}_${youtubeVideoId}_video.%(ext)s`);
       const videoArgs = [
         '--no-warnings',
         '--no-playlist',
@@ -73,8 +101,8 @@ class DownloaderService {
       
       let audioResult = null;
       if (downloadAudio && audioFormat) {
-        // Download audio separately
-        const audioOutputPath = path.join(this.downloadDir, `${videoId}_audio.%(ext)s`);
+        // Download audio separately with new naming format
+        const audioOutputPath = path.join(this.downloadDir, `${counter}_${youtubeVideoId}_audio.%(ext)s`);
         const audioArgs = [
           '--no-warnings',
           '--no-playlist',
@@ -88,9 +116,9 @@ class DownloaderService {
         audioResult = await this.executeYtDlp(audioArgs, videoId, 'audio');
       }
 
-      // Get file sizes
-      const videoFilePath = this.findDownloadedFile(videoId, 'video');
-      const audioFilePath = downloadAudio ? this.findDownloadedFile(videoId, 'audio') : null;
+      // Get file sizes with new pattern
+      const videoFilePath = this.findDownloadedFile(counter, youtubeVideoId, 'video');
+      const audioFilePath = downloadAudio ? this.findDownloadedFile(counter, youtubeVideoId, 'audio') : null;
       
       const videoSize = videoFilePath ? fs.statSync(videoFilePath).size : 0;
       const audioSize = audioFilePath ? fs.statSync(audioFilePath).size : 0;
@@ -276,9 +304,9 @@ class DownloaderService {
   }
 
   // Find downloaded file in directory
-  findDownloadedFile(videoId, type) {
+  findDownloadedFile(counter, youtubeVideoId, type) {
     const files = fs.readdirSync(this.downloadDir);
-    const pattern = `${videoId}_${type}`;
+    const pattern = `${counter}_${youtubeVideoId}_${type}`;
     const matchedFile = files.find(file => file.startsWith(pattern));
     return matchedFile ? path.join(this.downloadDir, matchedFile) : null;
   }

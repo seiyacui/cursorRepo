@@ -4,9 +4,15 @@ class YouTubeDownloader {
   constructor() {
     this.ws = null;
     this.videos = [];
+    this.filteredVideos = [];
     this.selectedVideoIds = new Set();
     this.downloadStartTime = 0;
     this.downloadTimer = null;
+    
+    // Pagination
+    this.currentPage = 1;
+    this.pageSize = 20;
+    this.totalPages = 0;
     
     this.init();
   }
@@ -152,6 +158,10 @@ class YouTubeDownloader {
       this.exportVideos('png');
     });
 
+    document.getElementById('exportExcelBtn').addEventListener('click', () => {
+      this.exportVideos('excel');
+    });
+
     // Select all checkbox
     document.getElementById('selectAll').addEventListener('change', (e) => {
       const checkboxes = document.querySelectorAll('input[name="videoSelect"]');
@@ -163,6 +173,38 @@ class YouTubeDownloader {
           this.selectedVideoIds.delete(parseInt(cb.value));
         }
       });
+    });
+
+    // Pagination controls
+    document.getElementById('pageSize').addEventListener('change', (e) => {
+      const value = e.target.value;
+      this.pageSize = value === 'all' ? Number.MAX_SAFE_INTEGER : parseInt(value);
+      this.currentPage = 1;
+      this.renderVideoTable();
+    });
+
+    document.getElementById('firstPageBtn').addEventListener('click', () => {
+      this.currentPage = 1;
+      this.renderVideoTable();
+    });
+
+    document.getElementById('prevPageBtn').addEventListener('click', () => {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+        this.renderVideoTable();
+      }
+    });
+
+    document.getElementById('nextPageBtn').addEventListener('click', () => {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++;
+        this.renderVideoTable();
+      }
+    });
+
+    document.getElementById('lastPageBtn').addEventListener('click', () => {
+      this.currentPage = this.totalPages;
+      this.renderVideoTable();
     });
   }
 
@@ -413,6 +455,8 @@ class YouTubeDownloader {
 
       if (response.ok) {
         this.videos = result.videos;
+        this.filteredVideos = result.videos;
+        this.currentPage = 1;
         this.renderVideoTable();
       } else {
         throw new Error(result.error || '加载视频列表失败');
@@ -427,19 +471,39 @@ class YouTubeDownloader {
   renderVideoTable() {
     const tbody = document.getElementById('videoTableBody');
     const recordCount = document.getElementById('recordCount');
+    const pageInfo = document.getElementById('pageInfo');
 
-    if (this.videos.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="11" class="no-data">暂无数据</td></tr>';
+    if (this.filteredVideos.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="12" class="no-data">暂无数据</td></tr>';
       recordCount.textContent = '共 0 条记录';
+      pageInfo.textContent = '第 0 页 / 共 0 页';
       return;
     }
 
-    tbody.innerHTML = this.videos.map((video, index) => `
+    // Calculate pagination
+    this.totalPages = Math.ceil(this.filteredVideos.length / this.pageSize);
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
+    }
+    
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = Math.min(startIndex + this.pageSize, this.filteredVideos.length);
+    const pageVideos = this.filteredVideos.slice(startIndex, endIndex);
+
+    tbody.innerHTML = pageVideos.map((video, index) => {
+      const globalIndex = startIndex + index + 1;
+      const shortUrl = video.url ? this.truncate(video.url, 30) : 'N/A';
+      return `
       <tr>
         <td><input type="checkbox" name="videoSelect" value="${video.id}"></td>
-        <td>${index + 1}</td>
+        <td>${globalIndex}</td>
         <td title="${this.escapeHtml(video.title || video.filename || 'N/A')}">
           ${this.truncate(this.escapeHtml(video.title || video.filename || 'N/A'), 40)}
+        </td>
+        <td title="${this.escapeHtml(video.url || '')}">
+          <a href="${this.escapeHtml(video.url || '#')}" target="_blank" class="url-link">
+            ${this.escapeHtml(shortUrl)}
+          </a>
         </td>
         <td>${this.escapeHtml(video.video_format || 'N/A')}</td>
         <td>${this.escapeHtml(video.audio_format || 'N/A')}</td>
@@ -449,14 +513,23 @@ class YouTubeDownloader {
         <td>${this.formatDate(video.created_at)}</td>
         <td><span class="status-badge status-${video.status}">${this.escapeHtml(video.status)}</span></td>
         <td>
+          ${video.url ? `<a href="${this.escapeHtml(video.url)}" target="_blank" class="btn btn-small btn-secondary action-btn" title="打开YouTube">🔗</a>` : ''}
           ${video.video_path ? `<a href="/downloads/${this.escapeHtml(video.video_path.split('/').pop())}" class="btn btn-small btn-success action-btn" download>视频</a>` : ''}
           ${video.audio_path ? `<a href="/downloads/${this.escapeHtml(video.audio_path.split('/').pop())}" class="btn btn-small btn-success action-btn" download>音频</a>` : ''}
           <button class="btn btn-small btn-danger action-btn" onclick="app.deleteVideo(${video.id})">删除</button>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
-    recordCount.textContent = `共 ${this.videos.length} 条记录`;
+    recordCount.textContent = `共 ${this.filteredVideos.length} 条记录`;
+    pageInfo.textContent = `第 ${this.currentPage} 页 / 共 ${this.totalPages} 页`;
+
+    // Update pagination buttons
+    document.getElementById('firstPageBtn').disabled = this.currentPage === 1;
+    document.getElementById('prevPageBtn').disabled = this.currentPage === 1;
+    document.getElementById('nextPageBtn').disabled = this.currentPage === this.totalPages;
+    document.getElementById('lastPageBtn').disabled = this.currentPage === this.totalPages;
 
     // Setup checkbox listeners
     document.querySelectorAll('input[name="videoSelect"]').forEach(cb => {

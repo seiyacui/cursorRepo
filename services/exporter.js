@@ -1,8 +1,9 @@
-// Export service for multiple formats (HTML, PDF, Markdown, PNG)
+// Export service for multiple formats (HTML, PDF, Markdown, PNG, Excel)
 const fs = require('fs');
 const path = require('path');
 const { marked } = require('marked');
 const htmlPdf = require('html-pdf-node');
+const XLSX = require('xlsx');
 
 class ExporterService {
   constructor() {
@@ -52,6 +53,7 @@ class ExporterService {
       <tr>
         <td>${index + 1}</td>
         <td>${this.escapeHtml(video.title || video.filename || 'N/A')}</td>
+        <td class="url-cell"><a href="${this.escapeHtml(video.url || '#')}" target="_blank">${this.escapeHtml(video.url || 'N/A')}</a></td>
         <td>${this.escapeHtml(video.video_format || 'N/A')}</td>
         <td>${this.escapeHtml(video.audio_format || 'N/A')}</td>
         <td>${this.formatDuration(video.duration)}</td>
@@ -152,6 +154,19 @@ class ExporterService {
     tr:hover {
       background: #f8f9fa;
     }
+    .url-cell {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .url-cell a {
+      color: #667eea;
+      text-decoration: none;
+    }
+    .url-cell a:hover {
+      text-decoration: underline;
+    }
     .status {
       padding: 4px 12px;
       border-radius: 20px;
@@ -212,6 +227,7 @@ class ExporterService {
           <tr>
             <th>#</th>
             <th>文件名</th>
+            <th>YouTube地址</th>
             <th>视频格式</th>
             <th>音频格式</th>
             <th>时长</th>
@@ -239,7 +255,8 @@ class ExporterService {
   // Generate Markdown content
   generateMarkdown(videos) {
     const rows = videos.map((video, index) => {
-      return `| ${index + 1} | ${video.title || video.filename || 'N/A'} | ${video.video_format || 'N/A'} | ${video.audio_format || 'N/A'} | ${this.formatDuration(video.duration)} | ${this.formatFileSize(video.video_size)} | ${this.formatFileSize(video.audio_size)} | ${this.formatDate(video.created_at)} | ${video.status} |`;
+      const url = video.url || 'N/A';
+      return `| ${index + 1} | ${video.title || video.filename || 'N/A'} | ${url} | ${video.video_format || 'N/A'} | ${video.audio_format || 'N/A'} | ${this.formatDuration(video.duration)} | ${this.formatFileSize(video.video_size)} | ${this.formatFileSize(video.audio_size)} | ${this.formatDate(video.created_at)} | ${video.status} |`;
     }).join('\n');
 
     return `# YouTube视频下载列表
@@ -255,8 +272,8 @@ class ExporterService {
 
 ## 视频列表
 
-| # | 文件名 | 视频格式 | 音频格式 | 时长 | 视频大小 | 音频大小 | 创建日期 | 状态 |
-|---|--------|----------|----------|------|----------|----------|----------|------|
+| # | 文件名 | YouTube地址 | 视频格式 | 音频格式 | 时长 | 视频大小 | 音频大小 | 创建日期 | 状态 |
+|---|--------|-------------|----------|----------|------|----------|----------|----------|------|
 ${rows}
 
 ---
@@ -362,6 +379,75 @@ ${rows}
     } catch (error) {
       console.error('PNG generation error:', error);
       throw new Error('Failed to generate PNG: ' + error.message);
+    }
+  }
+
+  // Export to Excel file
+  async exportExcel(videos) {
+    const filename = `youtube_videos_${Date.now()}.xlsx`;
+    const filepath = path.join(this.exportDir, filename);
+    
+    try {
+      // Prepare data for Excel
+      const data = videos.map((video, index) => ({
+        '序号': index + 1,
+        '文件名': video.title || video.filename || 'N/A',
+        'YouTube地址': video.url || 'N/A',
+        '视频格式': video.video_format || 'N/A',
+        '音频格式': video.audio_format || 'N/A',
+        '时长': this.formatDuration(video.duration),
+        '视频大小': this.formatFileSize(video.video_size),
+        '音频大小': this.formatFileSize(video.audio_size),
+        '创建日期': this.formatDate(video.created_at),
+        '状态': video.status
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 6 },  // 序号
+        { wch: 40 }, // 文件名
+        { wch: 50 }, // YouTube地址
+        { wch: 12 }, // 视频格式
+        { wch: 12 }, // 音频格式
+        { wch: 12 }, // 时长
+        { wch: 15 }, // 视频大小
+        { wch: 15 }, // 音频大小
+        { wch: 20 }, // 创建日期
+        { wch: 12 }  // 状态
+      ];
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'YouTube视频列表');
+
+      // Add summary sheet
+      const summary = [
+        { '统计项目': '总视频数', '值': videos.length },
+        { '统计项目': '下载成功', '值': videos.filter(v => v.status === 'completed').length },
+        { '统计项目': '下载失败', '值': videos.filter(v => v.status === 'failed').length },
+        { '统计项目': '视频总大小', '值': this.formatFileSize(videos.reduce((sum, v) => sum + (v.video_size || 0), 0)) },
+        { '统计项目': '音频总大小', '值': this.formatFileSize(videos.reduce((sum, v) => sum + (v.audio_size || 0), 0)) },
+        { '统计项目': '导出时间', '值': this.formatDate(new Date()) }
+      ];
+      const wsSummary = XLSX.utils.json_to_sheet(summary);
+      wsSummary['!cols'] = [{ wch: 20 }, { wch: 30 }];
+      XLSX.utils.book_append_sheet(wb, wsSummary, '统计摘要');
+
+      // Write to file
+      XLSX.writeFile(wb, filepath);
+      
+      return {
+        success: true,
+        filename: filename,
+        filepath: filepath,
+        url: `/exports/${filename}`
+      };
+    } catch (error) {
+      console.error('Excel generation error:', error);
+      throw new Error('Failed to generate Excel: ' + error.message);
     }
   }
 

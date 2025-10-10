@@ -141,6 +141,7 @@
           <button id="exportPdfBtn" class="btn btn-small">导出 PDF</button>
           <button id="exportMarkdownBtn" class="btn btn-small">导出 Markdown</button>
           <button id="exportPngBtn" class="btn btn-small">导出 PNG</button>
+          <button id="exportExcelBtn" class="btn btn-small btn-success">导出 Excel</button>
         </div>
       </div>
 
@@ -151,6 +152,7 @@
               <th><input type="checkbox" id="selectAll"></th>
               <th>#</th>
               <th>文件名</th>
+              <th>YouTube地址</th>
               <th>视频格式</th>
               <th>音频格式</th>
               <th>时长</th>
@@ -163,14 +165,32 @@
           </thead>
           <tbody id="videoTableBody">
             <tr>
-              <td colspan="11" class="no-data">暂无数据</td>
+              <td colspan="12" class="no-data">暂无数据</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <div class="pagination">
-        <span id="recordCount">共 0 条记录</span>
+        <div class="pagination-info">
+          <span id="recordCount">共 0 条记录</span>
+          <span id="pageInfo">第 0 页 / 共 0 页</span>
+        </div>
+        <div class="pagination-controls">
+          <label for="pageSize">每页显示：</label>
+          <select id="pageSize">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">ALL</option>
+          </select>
+          <button id="firstPageBtn" class="btn btn-small">首页</button>
+          <button id="prevPageBtn" class="btn btn-small">上一页</button>
+          <button id="nextPageBtn" class="btn btn-small">下一页</button>
+          <button id="lastPageBtn" class="btn btn-small">末页</button>
+        </div>
       </div>
     </section>
 

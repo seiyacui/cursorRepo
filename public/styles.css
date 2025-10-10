@@ -460,12 +460,57 @@ tr:hover {
   margin-right: 5px;
 }
 
+/* URL Link in Table */
+.url-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-size: 0.9em;
+  transition: var(--transition);
+}
+
+.url-link:hover {
+  color: var(--secondary-color);
+  text-decoration: underline;
+}
+
 /* Pagination */
 .pagination {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 15px 0;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.pagination-info {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pagination-controls label {
+  font-weight: 600;
+}
+
+.pagination-controls select {
+  padding: 6px 10px;
+  border: 2px solid var(--medium-gray);
+  border-radius: var(--border-radius);
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.pagination-controls select:focus {
+  outline: none;
+  border-color: var(--primary-color);
 }
 
 /* Statistics Grid */
