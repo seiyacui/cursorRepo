@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube 视频批量下载器</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>🎬 YouTube 视频批量下载器</h1>
+      <div class="stats-bar" id="statsBar">
+        <div class="stat-item">
+          <span class="stat-label">总视频:</span>
+          <span class="stat-value" id="totalVideos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">已完成:</span>
+          <span class="stat-value stat-success" id="completedVideos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">下载中:</span>
+          <span class="stat-value stat-warning" id="downloadingVideos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">失败:</span>
+          <span class="stat-value stat-error" id="failedVideos">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Download Form -->
+    <div class="card">
+      <h2>📥 批量下载设置</h2>
+      
+      <div class="form-group">
+        <label for="urlInput">YouTube 视频地址列表 (每行一个URL)</label>
+        <textarea 
+          id="urlInput" 
+          rows="6" 
+          placeholder="https://www.youtube.com/watch?v=xxxxx&#10;https://www.youtube.com/watch?v=yyyyy&#10;https://www.youtube.com/watch?v=zzzzz"
+        ></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="videoFormat">视频格式</label>
+          <select id="videoFormat">
+            <option value="mp4" selected>MP4 (推荐)</option>
+            <option value="mkv">MKV</option>
+            <option value="webm">WebM</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="quality">视频质量</label>
+          <select id="quality">
+            <option value="best" selected>最佳质量</option>
+            <option value="1080p">1080p</option>
+            <option value="720p">720p</option>
+            <option value="480p">480p</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="downloadAudio" checked>
+          <span>同时下载音频</span>
+        </label>
+      </div>
+
+      <div class="form-row" id="audioOptions">
+        <div class="form-group">
+          <label for="audioFormat">音频格式</label>
+          <select id="audioFormat">
+            <option value="mp3" selected>MP3 (推荐)</option>
+            <option value="aac">AAC</option>
+            <option value="wav">WAV</option>
+            <option value="m4a">M4A</option>
+          </select>
+        </div>
+      </div>
+
+      <button id="downloadBtn" class="btn btn-primary btn-large">
+        <span class="btn-icon">⬇️</span>
+        开始下载
+      </button>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="card" id="progressSection" style="display: none;">
+      <h2>📊 下载进度</h2>
+      
+      <div class="progress-summary">
+        <div class="progress-info">
+          <span>批次进度: <strong id="batchProgress">0/0</strong></span>
+          <span>队列中: <strong id="queueCount">0</strong></span>
+          <span>耗时: <strong id="elapsedTime">00:00</strong></span>
+        </div>
+      </div>
+
+      <div id="progressList" class="progress-list"></div>
+
+      <div id="downloadReport" class="download-report" style="display: none;">
+        <h3>✅ 下载完成!</h3>
+        <div id="reportContent"></div>
+      </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card">
+      <h2>🔍 搜索与筛选</h2>
+      
+      <div class="search-bar">
+        <input 
+          type="text" 
+          id="searchKeyword" 
+          placeholder="搜索视频标题或文件名..."
+          class="search-input"
+        >
+        
+        <div class="date-range">
+          <input type="date" id="startDate" class="date-input">
+          <span>至</span>
+          <input type="date" id="endDate" class="date-input">
+        </div>
+        
+        <button id="searchBtn" class="btn btn-secondary">
+          <span class="btn-icon">🔍</span>
+          搜索
+        </button>
+        
+        <button id="resetBtn" class="btn btn-secondary">
+          <span class="btn-icon">🔄</span>
+          重置
+        </button>
+      </div>
+    </div>
+
+    <!-- Export Section -->
+    <div class="card">
+      <h2>📤 导出列表</h2>
+      
+      <div class="export-buttons">
+        <button class="btn btn-export" data-format="html">
+          <span class="btn-icon">📄</span>
+          导出 HTML
+        </button>
+        <button class="btn btn-export" data-format="markdown">
+          <span class="btn-icon">📝</span>
+          导出 Markdown
+        </button>
+        <button class="btn btn-export" data-format="pdf">
+          <span class="btn-icon">📕</span>
+          导出 PDF
+        </button>
+        <button class="btn btn-export" data-format="png">
+          <span class="btn-icon">🖼️</span>
+          导出 PNG
+        </button>
+      </div>
+    </div>
+
+    <!-- Video List -->
+    <div class="card">
+      <h2>📹 视频列表</h2>
+      
+      <div class="table-container">
+        <table id="videoTable">
+          <thead>
+            <tr>
+              <th>标题</th>
+              <th>视频格式</th>
+              <th>音频格式</th>
+              <th>时长</th>
+              <th>视频大小</th>
+              <th>音频大小</th>
+              <th>创建时间</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="videoTableBody">
+            <tr>
+              <td colspan="9" class="empty-state">暂无数据，请先下载视频</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>由 YouTube 视频批量下载器提供 | 基于 yt-dlp</p>
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
