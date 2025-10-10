@@ -1,8 +1,10 @@
 // Slideshow Video Generator - Frontend Application
+// Version: 1.0.1 (2025-10-10)
 
 // ==================== Configuration ====================
 const API_BASE = window.location.origin;
 const WS_URL = `ws://${window.location.host}`;
+const APP_VERSION = '1.0.1';
 
 // ==================== State ====================
 let ws = null;
@@ -12,6 +14,13 @@ let currentFilters = {};
 let currentVideoId = null;
 let generationTimer = null;
 let generationStartTime = null;
+
+// 检查版本（提示用户刷新）
+const storedVersion = localStorage.getItem('app_version');
+if (storedVersion !== APP_VERSION) {
+  console.log(`🔄 版本更新: ${storedVersion} -> ${APP_VERSION}`);
+  localStorage.setItem('app_version', APP_VERSION);
+}
 
 // ==================== WebSocket Connection ====================
 function connectWebSocket() {
@@ -351,10 +360,11 @@ function startProgressPolling(videoId) {
   // 清除旧的轮询
   if (progressPollingInterval) {
     clearInterval(progressPollingInterval);
+    progressPollingInterval = null;
   }
 
-  // 每2秒轮询一次
-  progressPollingInterval = setInterval(async () => {
+  // 定义轮询函数
+  const pollProgress = async () => {
     try {
       const response = await fetch(`${API_BASE}/api/videos/${videoId}`);
       const data = await response.json();
@@ -368,12 +378,20 @@ function startProgressPolling(videoId) {
         const progressPercent = document.getElementById('progressPercent');
         const progressBar = document.getElementById('progressBar');
 
-        progressText.textContent = `生成中... ${video.generation_status}`;
+        // 根据状态显示不同的文本
+        if (video.generation_status === 'generating') {
+          progressText.textContent = '正在生成视频...';
+        } else if (video.generation_status === 'completed') {
+          progressText.textContent = '生成完成！';
+        }
+        
         progressPercent.textContent = `${video.generation_progress}%`;
         progressBar.style.width = `${video.generation_progress}%`;
 
         // 如果完成或失败，停止轮询
         if (video.generation_status === 'completed') {
+          console.log('✅ 检测到完成状态，停止轮询');
+          
           // 停止所有计时器
           if (progressPollingInterval) {
             clearInterval(progressPollingInterval);
@@ -384,15 +402,24 @@ function startProgressPolling(videoId) {
             generationTimer = null;
           }
           
-          showGenerationReport(video);
+          // 显示生成报告
+          setTimeout(() => {
+            showGenerationReport(video);
+          }, 500);
           
           // 刷新统计和列表
-          loadStats();
-          // 如果在列表TAB，刷新列表
-          if (document.getElementById('tab-list').classList.contains('active')) {
-            loadVideos();
-          }
+          setTimeout(() => {
+            loadStats();
+            // 如果在列表TAB，刷新列表
+            const listTab = document.getElementById('tab-list');
+            if (listTab && listTab.classList.contains('active')) {
+              loadVideos(currentFilters);
+            }
+          }, 1000);
+          
         } else if (video.generation_status === 'failed') {
+          console.log('❌ 检测到失败状态，停止轮询');
+          
           // 停止所有计时器
           if (progressPollingInterval) {
             clearInterval(progressPollingInterval);
@@ -412,7 +439,13 @@ function startProgressPolling(videoId) {
     } catch (error) {
       console.error('轮询进度失败:', error);
     }
-  }, 2000);
+  };
+
+  // 立即执行一次
+  pollProgress();
+  
+  // 然后每2秒轮询一次
+  progressPollingInterval = setInterval(pollProgress, 2000);
 }
 
 async function exportVideos(format) {
@@ -594,6 +627,38 @@ function showToast(message, type = 'info') {
   }, 3000);
 }
 
+// 检查是否有正在生成的视频
+async function checkOngoingGeneration() {
+  try {
+    const response = await fetch(`${API_BASE}/api/videos?status=generating&limit=1`);
+    const data = await response.json();
+    
+    if (data.success && data.data.videos.length > 0) {
+      const video = data.data.videos[0];
+      console.log(`🔄 发现正在生成的视频: ID=${video.id}, 进度=${video.generation_progress}%`);
+      
+      // 恢复生成界面
+      currentVideoId = video.id;
+      document.getElementById('progressSection').style.display = 'block';
+      document.getElementById('reportSection').style.display = 'none';
+      
+      // 启动计时器
+      generationStartTime = Date.now() - ((video.generation_progress || 0) * 100); // 粗略估算
+      generationTimer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - generationStartTime) / 1000);
+        document.getElementById('elapsedTime').textContent = `${elapsed}秒`;
+      }, 1000);
+      
+      // 启动轮询
+      startProgressPolling(video.id);
+      
+      showToast('恢复视频生成进度监控', 'info');
+    }
+  } catch (error) {
+    console.error('检查正在生成的视频失败:', error);
+  }
+}
+
 // ==================== Event Listeners ====================
 document.addEventListener('DOMContentLoaded', () => {
   // 连接 WebSocket
@@ -601,6 +666,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 加载初始数据
   loadStats();
+  
+  // 检查是否有正在生成的视频
+  checkOngoingGeneration();
 
   // Tab切换
   document.querySelectorAll('.tab-btn').forEach(btn => {
