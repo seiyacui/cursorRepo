@@ -450,21 +450,24 @@ class VideoGenerator {
         break;
 
       case 'rotate':
-        // 旋转效果 - 使用简化的淡入+模糊效果代替
-        // 真正的旋转需要复杂的FFmpeg命令且容易出错
-        console.log(`  ✅ 旋转效果 (使用淡入+强调效果代替)`);
-        command.videoFilters(
-          `fade=t=in:st=0:d=1,unsharp=5:5:1.0:5:5:0.0`
-        );
+        // 旋转效果 - 使用scale+rotate实现简单旋转
+        console.log(`  ✅ 旋转效果 (360度旋转)`);
+        const rotateDuration = Math.min(2, duration);
+        command.videoFilters([
+          `scale=iw*1.5:ih*1.5`,  // 先放大防止黑边
+          `rotate='2*PI*t/${rotateDuration}':c=black`,  // 旋转
+          `crop=iw/1.5:ih/1.5`  // 裁剪回原尺寸
+        ].join(','));
         break;
 
       case 'bounce':
-        // 弹跳效果 - 使用淡入+脉冲效果代替
-        // 直接的位移动画在FFmpeg中语法复杂
-        console.log(`  ✅ 弹跳效果 (使用脉冲淡入效果代替)`);
-        command.videoFilters(
-          `fade=t=in:st=0:d=0.5,fade=t=in:st=0.5:d=0.5`
-        );
+        // 弹跳效果 - 使用vstack实现上下弹跳
+        console.log(`  ✅ 弹跳效果 (上下弹跳)`);
+        const bounceHeight = 100;
+        command.videoFilters([
+          `pad=iw:ih+${bounceHeight*2}:0:${bounceHeight}`,
+          `crop=iw:ih:0:'${bounceHeight}+${bounceHeight}*abs(sin(8*PI*t/${duration}))'`
+        ].join(','));
         break;
 
       case 'none':

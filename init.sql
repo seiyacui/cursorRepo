@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS videos (
     video_format VARCHAR(10) DEFAULT 'mp4',
     video_duration DECIMAL(10, 2),
     video_file_size BIGINT,
+    video_resolution VARCHAR(10) DEFAULT '1080p',
     video_width INTEGER DEFAULT 1920,
     video_height INTEGER DEFAULT 1080,
     video_fps INTEGER DEFAULT 30,

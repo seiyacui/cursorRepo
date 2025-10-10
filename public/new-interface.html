@@ -188,6 +188,16 @@
       </div>
 
       <div class="form-group">
+        <label>视频清晰度</label>
+        <select id="resolution">
+          <option value="1080p" selected>1080P (1920x1080)</option>
+          <option value="2k">2K (2560x1440)</option>
+          <option value="3k">3K (3200x1800)</option>
+          <option value="4k">4K (3840x2160)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label>动画效果</label>
         <select id="animation">
           <option value="none">无动画</option>
@@ -288,6 +298,7 @@
       const textContent = document.getElementById('textContent').value;
       const musicFile = document.getElementById('musicFile').files[0];
       const duration = document.getElementById('duration').value;
+      const resolution = document.getElementById('resolution').value;
       const animation = document.getElementById('animation').value;
 
       if (!textContent || !musicFile) {
