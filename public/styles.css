@@ -408,6 +408,43 @@ th {
   z-index: 10;
 }
 
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: var(--transition);
+}
+
+th.sortable:hover {
+  background: linear-gradient(135deg, #5568d3, #6539a0);
+}
+
+th.sortable .sort-icon {
+  display: inline-block;
+  margin-left: 5px;
+  opacity: 0.3;
+  font-size: 0.8em;
+}
+
+th.sortable .sort-icon::after {
+  content: '⇅';
+}
+
+th.sortable.asc .sort-icon {
+  opacity: 1;
+}
+
+th.sortable.asc .sort-icon::after {
+  content: '▲';
+}
+
+th.sortable.desc .sort-icon {
+  opacity: 1;
+}
+
+th.sortable.desc .sort-icon::after {
+  content: '▼';
+}
+
 td {
   padding: 12px 15px;
   border-bottom: 1px solid var(--medium-gray);
