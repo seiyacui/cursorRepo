@@ -117,21 +117,48 @@ async function loadVideoDetails(videoId) {
 }
 
 function showGenerationReport(video) {
+  // 立即停止所有计时器和轮询
+  if (generationTimer) {
+    clearInterval(generationTimer);
+    generationTimer = null;
+  }
+  if (progressPollingInterval) {
+    clearInterval(progressPollingInterval);
+    progressPollingInterval = null;
+  }
+
   const progressSection = document.getElementById('progressSection');
   const reportSection = document.getElementById('reportSection');
 
   progressSection.style.display = 'none';
   reportSection.style.display = 'block';
 
+  // 计算总耗时
+  const totalTime = generationStartTime ? Math.floor((Date.now() - generationStartTime) / 1000) : 0;
+  
+  // 显示详细的生成报告
   document.getElementById('reportDuration').textContent = formatDuration(video.video_duration);
   document.getElementById('reportSize').textContent = formatFileSize(video.video_file_size);
-  document.getElementById('reportFormat').textContent = video.video_format.toUpperCase();
+  document.getElementById('reportFormat').textContent = (video.video_format || 'mp4').toUpperCase();
 
+  // 设置下载链接
   const downloadLink = document.getElementById('downloadLink');
-  downloadLink.href = `/outputs/${video.video_filename}`;
-  downloadLink.download = video.video_filename;
+  if (video.video_filename) {
+    downloadLink.href = `/outputs/${video.video_filename}`;
+    downloadLink.download = video.video_filename;
+    downloadLink.style.display = 'inline-flex';
+  } else {
+    downloadLink.style.display = 'none';
+  }
 
-  showToast('视频生成完成！', 'success');
+  console.log('✅ 生成报告显示完成:', {
+    duration: video.video_duration,
+    size: video.video_file_size,
+    filename: video.video_filename,
+    totalTime: `${totalTime}秒`
+  });
+
+  showToast(`视频生成完成！耗时${totalTime}秒`, 'success');
   loadStats();
 }
 
@@ -207,7 +234,7 @@ function renderVideoTable(videos) {
       <td>${v.id}</td>
       <td title="${v.text_content}">${truncate(v.text_content, 50)}</td>
       <td>${v.video_filename || 'N/A'}</td>
-      <td>${v.video_format || 'N/A'}</td>
+      <td>${v.video_format ? v.video_format.toUpperCase() : 'N/A'}</td>
       <td>${formatDuration(v.video_duration)}</td>
       <td>${formatFileSize(v.video_file_size)}</td>
       <td>${formatDate(v.created_at)}</td>
@@ -347,15 +374,39 @@ function startProgressPolling(videoId) {
 
         // 如果完成或失败，停止轮询
         if (video.generation_status === 'completed') {
-          clearInterval(progressPollingInterval);
-          clearInterval(generationTimer);
+          // 停止所有计时器
+          if (progressPollingInterval) {
+            clearInterval(progressPollingInterval);
+            progressPollingInterval = null;
+          }
+          if (generationTimer) {
+            clearInterval(generationTimer);
+            generationTimer = null;
+          }
+          
           showGenerationReport(video);
+          
+          // 刷新统计和列表
+          loadStats();
+          // 如果在列表TAB，刷新列表
+          if (document.getElementById('tab-list').classList.contains('active')) {
+            loadVideos();
+          }
         } else if (video.generation_status === 'failed') {
-          clearInterval(progressPollingInterval);
-          clearInterval(generationTimer);
+          // 停止所有计时器
+          if (progressPollingInterval) {
+            clearInterval(progressPollingInterval);
+            progressPollingInterval = null;
+          }
+          if (generationTimer) {
+            clearInterval(generationTimer);
+            generationTimer = null;
+          }
+          
           progressText.textContent = '生成失败：' + (video.error_message || '未知错误');
           progressBar.style.backgroundColor = '#dc3545';
           showToast('视频生成失败', 'error');
+          loadStats();
         }
       }
     } catch (error) {
@@ -493,9 +544,16 @@ function formatFileSize(bytes) {
 }
 
 function formatDuration(seconds) {
-  if (!seconds) return '0:00';
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
+  if (!seconds || seconds <= 0) return '0:00';
+  // 确保处理小数秒数
+  const totalSeconds = Math.floor(parseFloat(seconds));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
