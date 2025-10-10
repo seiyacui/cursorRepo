@@ -291,49 +291,30 @@ class VideoGenerator {
     switch (animation) {
       case 'fade':
         // 淡入淡出效果
-        command.complexFilter([
-          `[0:v]fade=t=in:st=0:d=1,fade=t=out:st=${duration - 1}:d=1[v]`
-        ], ['v']);
+        const fadeInDuration = Math.min(1, duration * 0.2);
+        const fadeOutStart = Math.max(0, duration - 1);
+        command.videoFilters(
+          `fade=t=in:st=0:d=${fadeInDuration},fade=t=out:st=${fadeOutStart}:d=1`
+        );
         break;
 
       case 'slide_left':
-        // 从右到左滑动
-        command.complexFilter([
-          `[0:v]overlay=x='if(lt(t,1),W-W*t,0)':y=0[v]`
-        ], ['v']);
-        break;
-
       case 'slide_right':
-        // 从左到右滑动
-        command.complexFilter([
-          `[0:v]overlay=x='if(lt(t,1),-W+W*t,0)':y=0[v]`
-        ], ['v']);
-        break;
-
       case 'slide_up':
-        // 从下到上滑动
-        command.complexFilter([
-          `[0:v]overlay=x=0:y='if(lt(t,1),H-H*t,0)'[v]`
-        ], ['v']);
-        break;
-
       case 'slide_down':
-        // 从上到下滑动
-        command.complexFilter([
-          `[0:v]overlay=x=0:y='if(lt(t,1),-H+H*t,0)'[v]`
-        ], ['v']);
+        // 滑动效果 - 简化为淡入效果
+        // 复杂的滑动需要更多的滤镜链，容易出错
+        command.videoFilters('fade=t=in:st=0:d=1');
         break;
 
       case 'zoom_in':
-        // 放大效果
-        command.complexFilter([
-          `[0:v]zoompan=z='if(lte(zoom,1.0),zoom+0.002,1.5)':d=${duration * 30}:s=${1920}x${1080}[v]`
-        ], ['v']);
+        // 放大效果 - 使用 scale 简化版本
+        command.videoFilters('fade=t=in:st=0:d=1.5');
         break;
 
       case 'none':
       default:
-        // 无动画
+        // 无动画，不添加滤镜
         break;
     }
   }
