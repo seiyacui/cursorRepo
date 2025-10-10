@@ -367,38 +367,38 @@ class VideoGenerator {
         break;
 
       case 'slide_left':
-        // 从右向左滑入 - 使用 overlay + 移动
+        // 从右向左滑入（图像从右边进入）
         console.log(`  ✅ 从右向左滑入 (${animDuration}秒)`);
         command.videoFilters([
-          `pad=iw*2:ih:iw:0`,
-          `crop=iw/2:ih:'iw/2-iw/2*min(t/${animDuration}\\,1)':0`
+          `pad=iw*2:ih:0:0`,  // 画布扩大2倍，图像在左边
+          `crop=iw/2:ih:'iw-iw*min(t/${animDuration}\\,1)':0`  // 裁剪窗口从右向左移动
         ].join(','));
         break;
 
       case 'slide_right':
-        // 从左向右滑入
+        // 从左向右滑入（图像从左边进入）
         console.log(`  ✅ 从左向右滑入 (${animDuration}秒)`);
         command.videoFilters([
-          `pad=iw*2:ih:0:0`,
-          `crop=iw/2:ih:'iw/2*min(t/${animDuration}\\,1)':0`
+          `pad=iw*2:ih:iw:0`,  // 画布扩大2倍，图像在右边
+          `crop=iw/2:ih:'iw*min(t/${animDuration}\\,1)':0`  // 裁剪窗口从左向右移动
         ].join(','));
         break;
 
       case 'slide_up':
-        // 从下向上滑入
+        // 从下向上滑入（图像从下边进入）
         console.log(`  ✅ 从下向上滑入 (${animDuration}秒)`);
         command.videoFilters([
-          `pad=iw:ih*2:0:ih`,
-          `crop=iw:ih/2:0:'ih/2-ih/2*min(t/${animDuration}\\,1)'`
+          `pad=iw:ih*2:0:0`,  // 画布扩大2倍，图像在上边
+          `crop=iw:ih/2:0:'ih-ih*min(t/${animDuration}\\,1)'`  // 裁剪窗口从下向上移动
         ].join(','));
         break;
 
       case 'slide_down':
-        // 从上向下滑入
+        // 从上向下滑入（图像从上边进入）
         console.log(`  ✅ 从上向下滑入 (${animDuration}秒)`);
         command.videoFilters([
-          `pad=iw:ih*2:0:0`,
-          `crop=iw:ih/2:0:'ih/2*min(t/${animDuration}\\,1)'`
+          `pad=iw:ih*2:0:ih`,  // 画布扩大2倍，图像在下边
+          `crop=iw:ih/2:0:'ih*min(t/${animDuration}\\,1)'`  // 裁剪窗口从上向下移动
         ].join(','));
         break;
 
