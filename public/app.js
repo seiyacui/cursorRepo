@@ -803,21 +803,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 文件选择显示
-  ['backgroundMusic', 'backgroundImage', 'customFont'].forEach(id => {
-    const input = document.getElementById(id);
-    const fileName = document.getElementById(id.replace(/([A-Z])/g, '-$1').toLowerCase().replace('background-', '') + 'FileName');
+  // 文件选择显示和删除按钮
+  document.getElementById('backgroundMusic').addEventListener('change', (e) => {
+    const fileName = e.target.files[0]?.name || '未选择文件';
+    document.getElementById('musicFileName').textContent = fileName;
+    const deleteBtn = document.getElementById('btnClearMusic');
+    if (deleteBtn) {
+      deleteBtn.style.display = e.target.files[0] ? 'block' : 'none';
+    }
+  });
+
+  document.getElementById('backgroundImage').addEventListener('change', (e) => {
+    const fileName = e.target.files[0]?.name || '未选择文件';
+    document.getElementById('imageFileName').textContent = fileName;
+    const deleteBtn = document.getElementById('btnClearImage');
+    if (deleteBtn) {
+      deleteBtn.style.display = e.target.files[0] ? 'block' : 'none';
+    }
+  });
+
+  document.getElementById('customFont').addEventListener('change', (e) => {
+    const fileName = e.target.files[0]?.name || '未选择文件';
+    document.getElementById('fontFileName').textContent = fileName;
+    const deleteBtn = document.getElementById('btnClearFont');
+    if (deleteBtn) {
+      deleteBtn.style.display = e.target.files[0] ? 'block' : 'none';
+    }
     
-    if (input && fileName) {
-      fileName.addEventListener('click', () => input.click());
-      
-      input.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-          fileName.textContent = e.target.files[0].name;
-        } else {
-          fileName.textContent = '未选择文件';
-        }
-      });
+    // 自动添加到字体列表
+    if (e.target.files[0]) {
+      addCustomFontToList(fileName);
     }
   });
 
