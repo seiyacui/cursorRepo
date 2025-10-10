@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube视频批量下载器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <h1>📹 YouTube视频批量下载器</h1>
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="label">总视频:</span>
+          <span class="value" id="totalVideos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">已完成:</span>
+          <span class="value" id="completedVideos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">下载中:</span>
+          <span class="value" id="downloadingVideos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">WebSocket:</span>
+          <span class="value" id="wsStatus">❌ 断开</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      
+      <!-- Download Form Section -->
+      <section class="card download-form">
+        <h2>🎬 添加下载任务</h2>
+        
+        <div class="form-group">
+          <label for="videoUrls">YouTube视频地址列表（每行一个URL）：</label>
+          <textarea 
+            id="videoUrls" 
+            rows="5" 
+            placeholder="https://www.youtube.com/watch?v=xxxxx&#10;https://www.youtube.com/watch?v=yyyyy&#10;https://www.youtube.com/watch?v=zzzzz"
+          ></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="videoFormat">视频格式：</label>
+            <select id="videoFormat">
+              <option value="mp4">MP4</option>
+              <option value="mkv">MKV</option>
+              <option value="webm">WebM</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="downloadAudio">
+              同时下载音频
+            </label>
+          </div>
+
+          <div class="form-group" id="audioFormatGroup" style="display: none;">
+            <label for="audioFormat">音频格式：</label>
+            <select id="audioFormat">
+              <option value="mp3">MP3</option>
+              <option value="aac">AAC</option>
+              <option value="wav">WAV</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button id="btnAddVideos" class="btn btn-primary">
+            <span>➕ 添加到列表</span>
+          </button>
+          <button id="btnStartDownload" class="btn btn-success" disabled>
+            <span>🚀 开始下载</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Progress Section -->
+      <section class="card progress-section" id="progressSection" style="display: none;">
+        <h2>📊 下载进度</h2>
+        
+        <div class="batch-progress">
+          <div class="progress-info">
+            <span id="batchProgressText">准备下载...</span>
+            <span id="batchProgressPercent">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="batchProgressBar" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="current-downloads" id="currentDownloads">
+          <!-- 动态添加当前下载的视频 -->
+        </div>
+
+        <div class="elapsed-time">
+          <strong>累计耗时：</strong>
+          <span id="elapsedTime">0秒</span>
+        </div>
+      </section>
+
+      <!-- Download Report Section -->
+      <section class="card report-section" id="reportSection" style="display: none;">
+        <h2>✅ 下载报告</h2>
+        
+        <div class="report-summary">
+          <div class="report-stat">
+            <div class="report-label">总计</div>
+            <div class="report-value" id="reportTotal">0</div>
+          </div>
+          <div class="report-stat success">
+            <div class="report-label">成功</div>
+            <div class="report-value" id="reportSuccess">0</div>
+          </div>
+          <div class="report-stat failed">
+            <div class="report-label">失败</div>
+            <div class="report-value" id="reportFailed">0</div>
+          </div>
+          <div class="report-stat">
+            <div class="report-label">总大小</div>
+            <div class="report-value" id="reportSize">0 MB</div>
+          </div>
+        </div>
+
+        <div class="report-links" id="reportLinks">
+          <!-- 动态添加下载链接 -->
+        </div>
+
+        <button class="btn btn-primary" onclick="location.reload()">
+          🔄 开始新的下载任务
+        </button>
+      </section>
+
+      <!-- Search and Filter Section -->
+      <section class="card search-section">
+        <h2>🔍 搜索和筛选</h2>
+        
+        <div class="search-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="searchKeyword">关键字：</label>
+              <input type="text" id="searchKeyword" placeholder="搜索标题或文件名">
+            </div>
+
+            <div class="form-group">
+              <label for="searchStartDate">开始日期：</label>
+              <input type="date" id="searchStartDate">
+            </div>
+
+            <div class="form-group">
+              <label for="searchEndDate">结束日期：</label>
+              <input type="date" id="searchEndDate">
+            </div>
+
+            <div class="form-group">
+              <label for="searchStatus">状态：</label>
+              <select id="searchStatus">
+                <option value="">全部</option>
+                <option value="completed">已完成</option>
+                <option value="downloading">下载中</option>
+                <option value="failed">失败</option>
+                <option value="pending">待下载</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button id="btnSearch" class="btn btn-primary">🔍 搜索</button>
+            <button id="btnReset" class="btn btn-secondary">🔄 重置</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Export Section -->
+      <section class="card export-section">
+        <h2>📤 导出列表</h2>
+        
+        <div class="export-buttons">
+          <button class="btn btn-export" data-format="html">
+            📄 导出HTML
+          </button>
+          <button class="btn btn-export" data-format="pdf">
+            📕 导出PDF
+          </button>
+          <button class="btn btn-export" data-format="markdown">
+            📝 导出Markdown
+          </button>
+          <button class="btn btn-export" data-format="png">
+            🖼️ 导出PNG
+          </button>
+        </div>
+
+        <div id="exportStatus" class="export-status"></div>
+      </section>
+
+      <!-- Video List Section -->
+      <section class="card video-list-section">
+        <h2>📋 视频列表</h2>
+        
+        <div class="table-container">
+          <table class="video-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>文件名</th>
+                <th>视频格式</th>
+                <th>音频格式</th>
+                <th>时长</th>
+                <th>视频大小</th>
+                <th>音频大小</th>
+                <th>创建日期</th>
+                <th>状态</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="videoTableBody">
+              <tr>
+                <td colspan="10" class="no-data">暂无数据，请添加视频</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <button id="btnPrevPage" class="btn btn-secondary" disabled>上一页</button>
+          <span id="pageInfo">第 1 页</span>
+          <button id="btnNextPage" class="btn btn-secondary" disabled>下一页</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
