@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频生成器 - 新界面 (无缓存)</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin: 20px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { color: #1a73e8; margin-bottom: 10px; }
+    .alert {
+      background: #ff5722;
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    button {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background: #1557b0; }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .progress-section {
+      display: none;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 30px;
+      background: #e0e0e0;
+      border-radius: 15px;
+      overflow: hidden;
+      margin: 15px 0;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4CAF50 0%, #8BC34A 100%);
+      width: 0%;
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+    .report-section {
+      display: none;
+      background: #e8f5e9;
+      border-left: 4px solid #4CAF50;
+    }
+    .report-item {
+      padding: 10px 0;
+      border-bottom: 1px solid #c8e6c9;
+    }
+    .report-item:last-child {
+      border-bottom: none;
+    }
+    .download-btn {
+      background: #4CAF50;
+      display: inline-block;
+      margin-top: 15px;
+      text-decoration: none;
+      color: white;
+    }
+    .download-btn:hover {
+      background: #45a049;
+    }
+    .status {
+      padding: 15px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-weight: 600;
+    }
+    .status.success { background: #d4edda; color: #155724; }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .status.info { background: #d1ecf1; color: #0c5460; }
+    .timer {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1a73e8;
+      text-align: center;
+      padding: 10px;
+    }
+    .list-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    .list-table th {
+      background: #1a73e8;
+      color: white;
+      padding: 12px;
+      text-align: left;
+    }
+    .list-table td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+    .list-table tr:hover {
+      background: #f5f5f5;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .badge.completed {
+      background: #4CAF50;
+      color: white;
+    }
+    .badge.generating {
+      background: #ff9800;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="alert">
+      🔥 这是新的独立界面 - 完全绕过缓存问题！时间戳: <?php echo time(); ?>
+    </div>
+
+    <div class="card">
+      <h1>🎬 视频生成器</h1>
+      <p>独立界面 - 内联JavaScript - 无缓存</p>
+      
+      <div class="form-group">
+        <label>显示文本 *</label>
+        <textarea id="textContent" required>测试文本</textarea>
+      </div>
+
+      <div class="form-group">
+        <label>背景音乐 *</label>
+        <input type="file" id="musicFile" accept="audio/*" required>
+      </div>
+
+      <div class="form-group">
+        <label>幻灯片时长（秒）</label>
+        <input type="number" id="duration" value="5" min="1" max="300">
+      </div>
+
+      <div class="form-group">
+        <label>动画效果</label>
+        <select id="animation">
+          <option value="none">无动画</option>
+          <option value="fade" selected>淡入淡出</option>
+          <option value="slide_left">从右向左滑入</option>
+          <option value="slide_right">从左向右滑入</option>
+          <option value="slide_up">从下向上滑入</option>
+          <option value="slide_down">从上向下滑入</option>
+          <option value="zoom_in">放大</option>
+          <option value="zoom_out">缩小</option>
+        </select>
+        <small style="color: #666;">注意: 旋转和弹跳动画暂时不可用</small>
+      </div>
+
+      <button id="generateBtn" onclick="generateVideo()">🚀 生成视频</button>
+    </div>
+
+    <!-- 进度区域 -->
+    <div class="card progress-section" id="progressSection">
+      <h2>📊 生成进度</h2>
+      <div class="timer" id="timer">0秒</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill">0%</div>
+      </div>
+      <div class="status info" id="statusText">准备中...</div>
+    </div>
+
+    <!-- 报告区域 -->
+    <div class="card report-section" id="reportSection">
+      <h2>✅ 生成完成！</h2>
+      <div class="report-item">
+        <strong>⏱️ 视频时长:</strong> <span id="reportDuration">-</span>
+      </div>
+      <div class="report-item">
+        <strong>📦 文件大小:</strong> <span id="reportSize">-</span>
+      </div>
+      <div class="report-item">
+        <strong>🎬 视频格式:</strong> <span id="reportFormat">-</span>
+      </div>
+      <div class="report-item">
+        <strong>⏰ 总耗时:</strong> <span id="reportTime">-</span>
+      </div>
+      <a id="downloadLink" class="download-btn button" href="#" download>⬇️ 下载视频</a>
+    </div>
+
+    <!-- 视频列表 -->
+    <div class="card">
+      <h2>📋 视频列表</h2>
+      <button onclick="loadVideos()">🔄 刷新列表</button>
+      <table class="list-table" id="videoList">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>文本内容</th>
+            <th>状态</th>
+            <th>时长</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="videoListBody">
+          <tr><td colspan="5" style="text-align: center;">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // 内联JavaScript - 完全独立
+    console.log('%c🔥 新界面加载完成 - 时间戳: ' + Date.now(), 'color: #ff5722; font-size: 16px; font-weight: bold;');
+    
+    let currentVideoId = null;
+    let timerInterval = null;
+    let pollingInterval = null;
+    let startTime = null;
+
+    // 格式化文件大小
+    function formatSize(bytes) {
+      if (!bytes) return '0 B';
+      const mb = bytes / 1024 / 1024;
+      return mb.toFixed(2) + ' MB';
+    }
+
+    // 格式化时长
+    function formatDuration(seconds) {
+      if (!seconds || seconds <= 0) return '0:00';
+      const totalSeconds = Math.floor(parseFloat(seconds));
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    // 生成视频
+    async function generateVideo() {
+      console.log('🎬 开始生成视频...');
+      
+      const textContent = document.getElementById('textContent').value;
+      const musicFile = document.getElementById('musicFile').files[0];
+      const duration = document.getElementById('duration').value;
+      const animation = document.getElementById('animation').value;
+
+      if (!textContent || !musicFile) {
+        alert('请填写文本内容并上传音乐文件！');
+        return;
+      }
+
+      // 1. 创建视频记录
+      const formData = new FormData();
+      formData.append('text_content', textContent);
+      formData.append('background_music', musicFile);
+      formData.append('slide_duration', duration);
+      formData.append('text_animation', animation);
+      formData.append('video_format', 'mp4');
+
+      document.getElementById('generateBtn').disabled = true;
+
+      try {
+        const createResp = await fetch('/api/videos/create', {
+          method: 'POST',
+          body: formData
+        });
+        const createData = await createResp.json();
+        
+        if (!createData.success) {
+          throw new Error('创建视频失败');
+        }
+
+        currentVideoId = createData.data.id;
+        console.log('✅ 视频记录创建成功, ID:', currentVideoId);
+
+        // 2. 开始生成
+        const genResp = await fetch(`/api/videos/${currentVideoId}/generate`, {
+          method: 'POST'
+        });
+
+        // 3. 显示进度界面
+        document.getElementById('progressSection').style.display = 'block';
+        document.getElementById('reportSection').style.display = 'none';
+
+        // 4. 启动计时器
+        startTime = Date.now();
+        timerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          document.getElementById('timer').textContent = elapsed + '秒';
+        }, 1000);
+
+        // 5. 启动轮询
+        startPolling();
+
+      } catch (error) {
+        console.error('❌ 生成失败:', error);
+        alert('生成失败: ' + error.message);
+        document.getElementById('generateBtn').disabled = false;
+      }
+    }
+
+    // 轮询进度
+    function startPolling() {
+      console.log('🔄 启动进度轮询...');
+      
+      pollingInterval = setInterval(async () => {
+        try {
+          const resp = await fetch(`/api/videos/${currentVideoId}`);
+          const data = await resp.json();
+
+          if (data.success) {
+            const video = data.data;
+            console.log(`📊 进度: ${video.generation_progress}%, 状态: ${video.generation_status}`);
+
+            // 更新进度条
+            document.getElementById('progressFill').style.width = video.generation_progress + '%';
+            document.getElementById('progressFill').textContent = video.generation_progress + '%';
+            document.getElementById('statusText').textContent = 
+              video.generation_status === 'completed' ? '✅ 生成完成！' : '正在生成...';
+
+            // 检查是否完成
+            if (video.generation_status === 'completed') {
+              console.log('%c✅ 视频生成完成！', 'color: #4CAF50; font-size: 18px; font-weight: bold;');
+              
+              // 停止计时器
+              if (timerInterval) {
+                console.log('🛑 停止计时器');
+                clearInterval(timerInterval);
+                timerInterval = null;
+              }
+
+              // 停止轮询
+              if (pollingInterval) {
+                console.log('🛑 停止轮询');
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+              }
+
+              // 显示报告
+              showReport(video);
+            }
+          }
+        } catch (error) {
+          console.error('轮询失败:', error);
+        }
+      }, 2000);
+    }
+
+    // 显示生成报告
+    function showReport(video) {
+      console.log('📝 显示生成报告:', video);
+
+      const elapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+
+      // 隐藏进度，显示报告
+      document.getElementById('progressSection').style.display = 'none';
+      document.getElementById('reportSection').style.display = 'block';
+
+      // 填充数据
+      document.getElementById('reportDuration').textContent = formatDuration(video.video_duration);
+      document.getElementById('reportSize').textContent = formatSize(video.video_file_size);
+      document.getElementById('reportFormat').textContent = (video.video_format || 'mp4').toUpperCase();
+      document.getElementById('reportTime').textContent = elapsed + '秒';
+
+      // 下载链接
+      const downloadLink = document.getElementById('downloadLink');
+      downloadLink.href = `/outputs/${video.video_filename}`;
+      downloadLink.download = video.video_filename;
+
+      // 重新启用按钮
+      document.getElementById('generateBtn').disabled = false;
+
+      // 刷新列表
+      loadVideos();
+
+      alert('🎉 视频生成成功！耗时 ' + elapsed + ' 秒');
+    }
+
+    // 加载视频列表
+    async function loadVideos() {
+      console.log('📋 加载视频列表...');
+      
+      try {
+        const resp = await fetch('/api/videos');
+        const data = await resp.json();
+
+        if (data.success) {
+          const tbody = document.getElementById('videoListBody');
+          tbody.innerHTML = '';
+
+          data.data.videos.forEach(v => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+              <td>${v.id}</td>
+              <td>${v.text_content.substring(0, 20)}...</td>
+              <td>
+                <span class="badge ${v.generation_status === 'completed' ? 'completed' : 'generating'}">
+                  ${v.generation_status === 'completed' ? '已完成' : '生成中'}
+                </span>
+              </td>
+              <td>${formatDuration(v.video_duration)}</td>
+              <td>
+                ${v.generation_status === 'completed' ? 
+                  `<a href="/outputs/${v.video_filename}" download class="download-btn" style="padding: 6px 12px; font-size: 12px;">下载</a>` : 
+                  '等待中...'}
+              </td>
+            `;
+          });
+
+          console.log('✅ 列表加载完成，共 ' + data.data.videos.length + ' 个视频');
+        }
+      } catch (error) {
+        console.error('❌ 加载列表失败:', error);
+      }
+    }
+
+    // 页面加载时加载列表
+    window.addEventListener('load', () => {
+      console.log('🚀 页面加载完成');
+      loadVideos();
+    });
+
+    // 定期刷新列表
+    setInterval(loadVideos, 10000);
+  </script>
+</body>
+</html>
