@@ -68,9 +68,15 @@ class VideoGenerator {
       const audioDuration = await this.getAudioDuration(video.background_music);
       console.log(`✅ [${videoId}] 音频时长: ${audioDuration}秒`);
       
-      // 计算实际视频时长（音频时长 vs 幻灯片时长）
-      const videoDuration = Math.min(audioDuration, video.slide_duration);
+      // 使用用户设定的幻灯片时长（音频会循环或截断）
+      const videoDuration = video.slide_duration || 5;
       console.log(`⏱️  [${videoId}] 视频时长: ${videoDuration}秒 (音频:${audioDuration}秒, 设定:${video.slide_duration}秒)`);
+      
+      if (audioDuration < videoDuration) {
+        console.log(`🔁 音频较短，将循环播放音频`);
+      } else if (audioDuration > videoDuration) {
+        console.log(`✂️  音频较长，将截断至${videoDuration}秒`);
+      }
 
       // 4. 生成视频
       console.log(`🎬 [${videoId}] 开始合成视频...`);
@@ -271,11 +277,12 @@ class VideoGenerator {
           `-t ${duration}`
         ]);
 
-      // 添加音频输入
+      // 添加音频输入（支持循环）
       console.log(`➕ 添加音频输入: ${video.background_music}`);
       command.input(video.background_music)
         .inputOptions([
-          `-t ${duration}`
+          '-stream_loop -1',  // 无限循环音频
+          `-t ${duration}`    // 但只取指定时长
         ]);
 
       // 设置输出选项
