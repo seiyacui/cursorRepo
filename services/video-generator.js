@@ -477,33 +477,186 @@ class VideoGenerator {
         break;
 
       case 'rotate':
-        // 旋转效果 - 使用scale+rotate实现简单旋转
-        console.log(`  ✅ 旋转效果 (360度旋转)`);
+        // 旋转效果 - 顺时针360度
+        console.log(`  ✅ 旋转效果 (顺时针360度)`);
         const rotateDuration = Math.min(2, duration);
         command.videoFilters([
-          `scale=iw*1.5:ih*1.5`,  // 先放大防止黑边
-          `rotate='2*PI*t/${rotateDuration}':c=black`,  // 旋转
-          `crop=iw/1.5:ih/1.5`  // 裁剪回原尺寸
+          `scale=iw*1.5:ih*1.5`,
+          `rotate='2*PI*min(t/${rotateDuration}\\,1)':c=black`,
+          `crop=iw/1.5:ih/1.5`
+        ].join(','));
+        break;
+
+      case 'rotate_reverse':
+        // 旋转效果 - 逆时针360度
+        console.log(`  ✅ 旋转效果 (逆时针360度)`);
+        const rotateRevDuration = Math.min(2, duration);
+        command.videoFilters([
+          `scale=iw*1.5:ih*1.5`,
+          `rotate='-2*PI*min(t/${rotateRevDuration}\\,1)':c=black`,
+          `crop=iw/1.5:ih/1.5`
+        ].join(','));
+        break;
+
+      case 'spin':
+        // 快速旋转 - 3圈
+        console.log(`  ✅ 快速旋转 (3圈)`);
+        const spinDuration = Math.min(2, duration);
+        command.videoFilters([
+          `scale=iw*1.5:ih*1.5`,
+          `rotate='6*PI*min(t/${spinDuration}\\,1)':c=black`,
+          `crop=iw/1.5:ih/1.5`
         ].join(','));
         break;
 
       case 'bounce':
-        // 弹跳效果 - 上下弹跳动画
+        // 弹跳效果 - 上下弹跳
         console.log(`  ✅ 弹跳效果 (上下弹跳)`);
-        const bounceHeight = 150;  // 弹跳高度（像素）
-        const bounceFreq = 3;  // 弹跳次数
-        // 使用 pad 和 crop 实现弹跳效果
-        // y 坐标使用正弦函数实现弹跳：abs(sin(x)) 创建弹跳曲线
+        const bounceHeight = 150;
+        const bounceFreq = 3;
         command.videoFilters([
-          `pad=iw:ih+${bounceHeight}:0:${bounceHeight/2}`,  // 扩大画布，留出弹跳空间
-          `crop=iw:ih:0:${bounceHeight/2}+${bounceHeight/2}*abs(sin(${bounceFreq}*2*PI*t/${duration}))`  // Y坐标随时间弹跳
+          `pad=iw:ih+${bounceHeight}:0:${bounceHeight/2}`,
+          `crop=iw:ih:0:${bounceHeight/2}+${bounceHeight/2}*abs(sin(${bounceFreq}*2*PI*t/${duration}))`
         ].join(','));
-        console.log(`  📊 弹跳参数: 高度=${bounceHeight}px, 频率=${bounceFreq}次`);
+        break;
+
+      case 'bounce_horizontal':
+        // 水平弹跳
+        console.log(`  ✅ 水平弹跳 (左右跳动)`);
+        const bounceWidth = 150;
+        const hBounceFreq = 3;
+        command.videoFilters([
+          `pad=iw+${bounceWidth}:ih:${bounceWidth/2}:0`,
+          `crop=iw:ih:${bounceWidth/2}+${bounceWidth/2}*abs(sin(${hBounceFreq}*2*PI*t/${duration})):0`
+        ].join(','));
+        break;
+
+      case 'shake':
+        // 抖动效果
+        console.log(`  ✅ 抖动效果 (震动)`);
+        const shakeAmount = 10;
+        command.videoFilters([
+          `pad=iw+${shakeAmount*2}:ih+${shakeAmount*2}:${shakeAmount}:${shakeAmount}`,
+          `crop=iw:ih:${shakeAmount}+${shakeAmount}*sin(20*2*PI*t/${duration}):${shakeAmount}+${shakeAmount}*cos(20*2*PI*t/${duration})`
+        ].join(','));
+        break;
+
+      case 'swing':
+        // 摆动效果（钟摆）
+        console.log(`  ✅ 摆动效果 (钟摆)`);
+        const swingAngle = 0.3;  // 弧度
+        const swingFreq = 2;
+        command.videoFilters([
+          `scale=iw*1.5:ih*1.5`,
+          `rotate='${swingAngle}*sin(${swingFreq}*2*PI*t/${duration})':c=black`,
+          `crop=iw/1.5:ih/1.5`
+        ].join(','));
+        break;
+
+      case 'wave':
+        // 波浪效果
+        console.log(`  ✅ 波浪效果 (上下波动)`);
+        const waveHeight = 50;
+        const waveFreq = 4;
+        command.videoFilters([
+          `pad=iw:ih+${waveHeight*2}:0:${waveHeight}`,
+          `crop=iw:ih:0:${waveHeight}+${waveHeight}*sin(${waveFreq}*2*PI*t/${duration})`
+        ].join(','));
+        break;
+
+      case 'slide_diagonal_tl':
+        // 从右下到左上
+        console.log(`  ✅ 对角线滑入 (右下→左上)`);
+        command.videoFilters([
+          `pad=iw*2:ih*2:0:0`,
+          `crop=iw/2:ih/2:'iw-iw*min(t/${animDuration}\\,1)':'ih-ih*min(t/${animDuration}\\,1)'`
+        ].join(','));
+        break;
+
+      case 'slide_diagonal_tr':
+        // 从左下到右上
+        console.log(`  ✅ 对角线滑入 (左下→右上)`);
+        command.videoFilters([
+          `pad=iw*2:ih*2:iw:0`,
+          `crop=iw/2:ih/2:'iw*min(t/${animDuration}\\,1)':'ih-ih*min(t/${animDuration}\\,1)'`
+        ].join(','));
+        break;
+
+      case 'blink':
+        // 闪烁效果
+        console.log(`  ✅ 闪烁效果 (快速闪动)`);
+        const blinkFreq = 6;
+        command.videoFilters(`fade=t=in:st=0:d=${animDuration},colorchannelmixer=aa='0.5+0.5*sin(${blinkFreq}*2*PI*t/${duration})'`);
+        break;
+
+      case 'pulse':
+        // 脉冲效果
+        console.log(`  ✅ 脉冲效果 (心跳)`);
+        const pulseFreq = 2;
+        command.videoFilters(`scale='iw*(1+0.1*abs(sin(${pulseFreq}*2*PI*t/${duration})))':'ih*(1+0.1*abs(sin(${pulseFreq}*2*PI*t/${duration})))'`);
+        break;
+
+      case 'blur_in':
+        // 模糊到清晰
+        console.log(`  ✅ 模糊到清晰`);
+        command.videoFilters(`boxblur='10*max(0\\,1-t/${animDuration})':'10*max(0\\,1-t/${animDuration})'`);
+        break;
+
+      case 'glow':
+        // 光晕效果
+        console.log(`  ✅ 光晕效果 (发光)`);
+        command.videoFilters(`eq=brightness=0.2:saturation=1.5,fade=t=in:st=0:d=${animDuration}`);
+        break;
+
+      case 'typewriter':
+        // 打字机效果（用wipe模拟）
+        console.log(`  ✅ 打字机效果`);
+        command.videoFilters([
+          `pad=iw*2:ih:0:0`,
+          `crop=iw/2:ih:'iw*min(t/${animDuration}\\,1)':0`
+        ].join(','));
+        break;
+
+      case 'flip_horizontal':
+        // 水平翻转
+        console.log(`  ✅ 水平翻转`);
+        command.videoFilters(`hflip,fade=t=in:st=0:d=${animDuration}`);
+        break;
+
+      case 'flip_vertical':
+        // 垂直翻转
+        console.log(`  ✅ 垂直翻转`);
+        command.videoFilters(`vflip,fade=t=in:st=0:d=${animDuration}`);
+        break;
+
+      case 'spiral':
+        // 螺旋进入
+        console.log(`  ✅ 螺旋进入`);
+        const spiralDuration = Math.min(2, duration);
+        command.videoFilters([
+          `scale=iw*1.5:ih*1.5`,
+          `rotate='4*PI*min(t/${spiralDuration}\\,1)':c=black`,
+          `crop=iw/1.5:ih/1.5`
+        ].join(','));
+        break;
+
+      case 'elastic':
+        // 弹性效果
+        console.log(`  ✅ 弹性效果 (弹簧)`);
+        command.videoFilters(`scale='iw*(1+0.5*exp(-5*t/${animDuration})*sin(10*t/${animDuration}))':'ih*(1+0.5*exp(-5*t/${animDuration})*sin(10*t/${animDuration}))'`);
+        break;
+
+      case 'rubber':
+        // 橡皮筋效果
+        console.log(`  ✅ 橡皮筋效果 (拉伸)`);
+        command.videoFilters([
+          `scale='iw*(1+0.3*sin(3*2*PI*t/${duration}))':'ih*(1-0.3*sin(3*2*PI*t/${duration}))'`
+        ].join(','));
         break;
 
       case 'none':
       default:
-        // 无动画，不添加滤镜
+        // 无动画
         console.log(`  ✅ 无动画`);
         break;
     }

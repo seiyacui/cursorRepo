@@ -573,9 +573,12 @@ function applyPreviewAnimation(element, animation) {
   element.style.animation = 'none';
   setTimeout(() => {
     switch (animation) {
+      // 基础动画
       case 'fade':
         element.style.animation = 'fadeIn 1s ease-in-out';
         break;
+      
+      // 滑动效果
       case 'slide_left':
         element.style.animation = 'slideInLeft 1s ease-out';
         break;
@@ -588,9 +591,83 @@ function applyPreviewAnimation(element, animation) {
       case 'slide_down':
         element.style.animation = 'slideInDown 1s ease-out';
         break;
+      case 'slide_diagonal_tl':
+        element.style.animation = 'slideInDiagonalTL 1s ease-out';
+        break;
+      case 'slide_diagonal_tr':
+        element.style.animation = 'slideInDiagonalTR 1s ease-out';
+        break;
+      
+      // 旋转缩放
       case 'zoom_in':
         element.style.animation = 'zoomIn 1s ease-out';
         break;
+      case 'zoom_out':
+        element.style.animation = 'zoomOut 1s ease-out';
+        break;
+      case 'rotate':
+        element.style.animation = 'rotateIn 1s ease-out';
+        break;
+      case 'rotate_reverse':
+        element.style.animation = 'rotateInReverse 1s ease-out';
+        break;
+      case 'spin':
+        element.style.animation = 'spinIn 1s ease-out';
+        break;
+      
+      // 跳动摆动
+      case 'bounce':
+        element.style.animation = 'bounceIn 1s ease-out';
+        break;
+      case 'bounce_horizontal':
+        element.style.animation = 'bounceHorizontal 2s ease-in-out infinite';
+        break;
+      case 'shake':
+        element.style.animation = 'shake 0.5s ease-in-out infinite';
+        break;
+      case 'swing':
+        element.style.animation = 'swing 2s ease-in-out infinite';
+        break;
+      case 'wave':
+        element.style.animation = 'wave 2s ease-in-out infinite';
+        break;
+      
+      // 特效动画
+      case 'blink':
+        element.style.animation = 'blink 0.5s ease-in-out infinite';
+        break;
+      case 'pulse':
+        element.style.animation = 'pulse 1s ease-in-out infinite';
+        break;
+      case 'blur_in':
+        element.style.animation = 'blurIn 1s ease-out';
+        break;
+      case 'glow':
+        element.style.animation = 'glow 1s ease-in-out';
+        break;
+      case 'typewriter':
+        element.style.animation = 'typewriter 2s steps(40) forwards';
+        break;
+      
+      // 创意效果
+      case 'flip_horizontal':
+        element.style.animation = 'flipHorizontal 1s ease-out';
+        break;
+      case 'flip_vertical':
+        element.style.animation = 'flipVertical 1s ease-out';
+        break;
+      case 'spiral':
+        element.style.animation = 'spiral 2s ease-out';
+        break;
+      case 'elastic':
+        element.style.animation = 'elastic 1s ease-out';
+        break;
+      case 'rubber':
+        element.style.animation = 'rubber 2s ease-in-out infinite';
+        break;
+      
+      default:
+        element.style.animation = 'none';
     }
   }, 10);
 }
@@ -598,10 +675,13 @@ function applyPreviewAnimation(element, animation) {
 // Add animation keyframes
 const style = document.createElement('style');
 style.textContent = `
+  /* 基础动画 */
   @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
   }
+  
+  /* 滑动效果 */
   @keyframes slideInLeft {
     from { transform: translateX(100%); }
     to { transform: translateX(0); }
@@ -618,9 +698,108 @@ style.textContent = `
     from { transform: translateY(-100%); }
     to { transform: translateY(0); }
   }
+  @keyframes slideInDiagonalTL {
+    from { transform: translate(100%, 100%); }
+    to { transform: translate(0, 0); }
+  }
+  @keyframes slideInDiagonalTR {
+    from { transform: translate(-100%, 100%); }
+    to { transform: translate(0, 0); }
+  }
+  
+  /* 旋转缩放 */
   @keyframes zoomIn {
     from { transform: scale(0.5); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes zoomOut {
+    from { transform: scale(2); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes rotateIn {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes rotateInReverse {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+  }
+  @keyframes spinIn {
+    from { transform: rotate(0deg) scale(0.5); opacity: 0; }
+    to { transform: rotate(1080deg) scale(1); opacity: 1; }
+  }
+  
+  /* 跳动摆动 */
+  @keyframes bounceIn {
+    0%, 100% { transform: translateY(0); }
+    25%, 75% { transform: translateY(-30px); }
+    50% { transform: translateY(0); }
+  }
+  @keyframes bounceHorizontal {
+    0%, 100% { transform: translateX(0); }
+    25%, 75% { transform: translateX(-20px); }
+    50% { transform: translateX(20px); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px) rotate(-2deg); }
+    75% { transform: translateX(10px) rotate(2deg); }
+  }
+  @keyframes swing {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(15deg); }
+    75% { transform: rotate(-15deg); }
+  }
+  @keyframes wave {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+  
+  /* 特效动画 */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+  @keyframes blurIn {
+    from { filter: blur(10px); opacity: 0; }
+    to { filter: blur(0); opacity: 1; }
+  }
+  @keyframes glow {
+    from { filter: brightness(1); text-shadow: none; }
+    to { filter: brightness(1.5); text-shadow: 0 0 20px currentColor; }
+  }
+  @keyframes typewriter {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+  
+  /* 创意效果 */
+  @keyframes flipHorizontal {
+    from { transform: scaleX(-1); opacity: 0; }
+    to { transform: scaleX(1); opacity: 1; }
+  }
+  @keyframes flipVertical {
+    from { transform: scaleY(-1); opacity: 0; }
+    to { transform: scaleY(1); opacity: 1; }
+  }
+  @keyframes spiral {
+    from { transform: rotate(0deg) scale(0.1); opacity: 0; }
+    to { transform: rotate(720deg) scale(1); opacity: 1; }
+  }
+  @keyframes elastic {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+  }
+  @keyframes rubber {
+    0%, 100% { transform: scaleX(1) scaleY(1); }
+    25% { transform: scaleX(1.2) scaleY(0.8); }
+    75% { transform: scaleX(0.8) scaleY(1.2); }
   }
 `;
 document.head.appendChild(style);
