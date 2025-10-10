@@ -1,10 +1,10 @@
 // Slideshow Video Generator - Frontend Application
-// Version: 1.0.2 (2025-10-10 - Critical Update)
+// Version: 1.0.3 (2025-10-10 - Emergency Fix)
 
 // ==================== Configuration ====================
 const API_BASE = window.location.origin;
 const WS_URL = `ws://${window.location.host}`;
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 
 // ==================== State ====================
 let ws = null;
@@ -21,17 +21,34 @@ if (storedVersion !== APP_VERSION) {
   console.log(`%c🔄 检测到版本更新: ${storedVersion || '旧版本'} -> ${APP_VERSION}`, 'color: #4CAF50; font-size: 16px; font-weight: bold;');
   console.log('%c⚠️  正在清除旧缓存...', 'color: #FF9800; font-size: 14px;');
   
+  // 清除所有存储
+  localStorage.clear();
+  sessionStorage.clear();
   localStorage.setItem('app_version', APP_VERSION);
   
   // 清除所有旧的状态
-  if (generationTimer) clearInterval(generationTimer);
-  if (progressPollingInterval) clearInterval(progressPollingInterval);
+  if (typeof generationTimer !== 'undefined' && generationTimer) clearInterval(generationTimer);
+  if (typeof progressPollingInterval !== 'undefined' && progressPollingInterval) clearInterval(progressPollingInterval);
   
   console.log('%c✅ 缓存已清除，应用版本已更新！', 'color: #4CAF50; font-size: 14px; font-weight: bold;');
+  console.log('%c🔄 建议: 请刷新页面以确保所有更新生效', 'color: #FF9800; font-size: 14px; font-weight: bold;');
 }
 
 console.log(`%c📱 应用版本: ${APP_VERSION}`, 'color: #2196F3; font-size: 14px; font-weight: bold;');
 console.log(`%c🔧 调试模式: 已启用`, 'color: #9C27B0; font-size: 12px;');
+
+// 紧急检查：如果检测到轮询异常，自动跳转到强制更新页面
+setTimeout(() => {
+  if (typeof progressPollingInterval !== 'undefined' && progressPollingInterval !== null) {
+    const runningTime = Date.now() - (generationStartTime || Date.now());
+    if (runningTime > 300000) { // 超过5分钟
+      console.error('%c⚠️  检测到计时器异常！正在跳转到强制更新页面...', 'color: #f44336; font-size: 16px; font-weight: bold;');
+      setTimeout(() => {
+        window.location.href = '/force-update.html';
+      }, 2000);
+    }
+  }
+}, 60000); // 1分钟后检查
 
 // ==================== WebSocket Connection ====================
 function connectWebSocket() {
