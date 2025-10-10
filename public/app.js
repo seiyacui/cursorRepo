@@ -1,10 +1,10 @@
 // Slideshow Video Generator - Frontend Application
-// Version: 1.0.1 (2025-10-10)
+// Version: 1.0.2 (2025-10-10 - Critical Update)
 
 // ==================== Configuration ====================
 const API_BASE = window.location.origin;
 const WS_URL = `ws://${window.location.host}`;
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 
 // ==================== State ====================
 let ws = null;
@@ -15,12 +15,23 @@ let currentVideoId = null;
 let generationTimer = null;
 let generationStartTime = null;
 
-// 检查版本（提示用户刷新）
+// 强制版本检查和缓存清除
 const storedVersion = localStorage.getItem('app_version');
 if (storedVersion !== APP_VERSION) {
-  console.log(`🔄 版本更新: ${storedVersion} -> ${APP_VERSION}`);
+  console.log(`%c🔄 检测到版本更新: ${storedVersion || '旧版本'} -> ${APP_VERSION}`, 'color: #4CAF50; font-size: 16px; font-weight: bold;');
+  console.log('%c⚠️  正在清除旧缓存...', 'color: #FF9800; font-size: 14px;');
+  
   localStorage.setItem('app_version', APP_VERSION);
+  
+  // 清除所有旧的状态
+  if (generationTimer) clearInterval(generationTimer);
+  if (progressPollingInterval) clearInterval(progressPollingInterval);
+  
+  console.log('%c✅ 缓存已清除，应用版本已更新！', 'color: #4CAF50; font-size: 14px; font-weight: bold;');
 }
+
+console.log(`%c📱 应用版本: ${APP_VERSION}`, 'color: #2196F3; font-size: 14px; font-weight: bold;');
+console.log(`%c🔧 调试模式: 已启用`, 'color: #9C27B0; font-size: 12px;');
 
 // ==================== WebSocket Connection ====================
 function connectWebSocket() {
@@ -390,29 +401,39 @@ function startProgressPolling(videoId) {
 
         // 如果完成或失败，停止轮询
         if (video.generation_status === 'completed') {
-          console.log('✅ 检测到完成状态，停止轮询');
+          console.log('%c✅ 视频生成完成！停止所有计时器...', 'color: #4CAF50; font-size: 14px; font-weight: bold;');
           
-          // 停止所有计时器
+          // 立即停止所有计时器
+          console.log('🛑 清除轮询计时器...', progressPollingInterval ? 'ID=' + progressPollingInterval : '无');
           if (progressPollingInterval) {
             clearInterval(progressPollingInterval);
             progressPollingInterval = null;
           }
+          
+          console.log('🛑 清除生成计时器...', generationTimer ? 'ID=' + generationTimer : '无');
           if (generationTimer) {
             clearInterval(generationTimer);
             generationTimer = null;
           }
           
-          // 显示生成报告
-          setTimeout(() => {
-            showGenerationReport(video);
-          }, 500);
+          console.log('📊 停止计时器后的状态:', {
+            progressPollingInterval,
+            generationTimer,
+            currentVideoId
+          });
+          
+          // 立即显示生成报告
+          console.log('📝 准备显示生成报告...');
+          showGenerationReport(video);
           
           // 刷新统计和列表
           setTimeout(() => {
+            console.log('🔄 刷新统计和列表...');
             loadStats();
             // 如果在列表TAB，刷新列表
             const listTab = document.getElementById('tab-list');
             if (listTab && listTab.classList.contains('active')) {
+              console.log('📋 刷新视频列表（当前在列表TAB）');
               loadVideos(currentFilters);
             }
           }, 1000);
