@@ -177,7 +177,23 @@ body {
 }
 
 .form-group input[type="file"] {
-  display: none;
+  /* 显示文件输入框以支持直接点击 */
+  padding: 8px 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--white);
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.form-group input[type="file"]:hover {
+  border-color: var(--primary-color);
+}
+
+.form-group input[type="file"]:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .form-group input[type="text"]:focus,
