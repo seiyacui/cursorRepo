@@ -383,8 +383,16 @@
           if (data.success) {
             const video = data.data;
             
+            // 详细记录状态信息
             log(`[轮询#${pollCount}] 进度: ${video.generation_progress}%, 状态: ${video.generation_status}`, 
                 video.generation_status === 'completed' ? 'success' : 'info');
+            
+            // 显示原始数据
+            if (pollCount % 5 === 0) {  // 每5次轮询显示一次详细数据
+              log(`[调试] 原始状态值: "${video.generation_status}" (类型: ${typeof video.generation_status}, 长度: ${video.generation_status ? video.generation_status.length : 0})`, 'warning');
+              log(`[调试] 条件判断: video.generation_status === 'completed' → ${video.generation_status === 'completed'}`, 'warning');
+              log(`[调试] 完整数据: ${JSON.stringify({status: video.generation_status, progress: video.generation_progress, id: video.id}).substring(0, 150)}`, 'info');
+            }
 
             // 更新显示
             document.getElementById('statusState').textContent = video.generation_status;
@@ -392,8 +400,14 @@
             document.getElementById('progressFill').style.width = video.generation_progress + '%';
             document.getElementById('progressFill').textContent = video.generation_progress + '%';
 
-            // 检查是否完成
-            if (video.generation_status === 'completed') {
+            // 检查是否完成 - 添加多种检查方式
+            const isCompleted = video.generation_status === 'completed' || 
+                               String(video.generation_status).trim() === 'completed' ||
+                               video.generation_progress >= 100;
+            
+            log(`[调试] isCompleted = ${isCompleted}`, isCompleted ? 'success' : 'warning');
+            
+            if (isCompleted) {
               log('', 'success');
               log('═══════════════════════════════════', 'success');
               log('✅✅✅ 视频生成完成！✅✅✅', 'success');
