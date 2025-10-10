@@ -488,13 +488,17 @@ class VideoGenerator {
         break;
 
       case 'bounce':
-        // 弹跳效果 - 使用vstack实现上下弹跳
+        // 弹跳效果 - 上下弹跳动画
         console.log(`  ✅ 弹跳效果 (上下弹跳)`);
-        const bounceHeight = 100;
+        const bounceHeight = 150;  // 弹跳高度（像素）
+        const bounceFreq = 3;  // 弹跳次数
+        // 使用 pad 和 crop 实现弹跳效果
+        // y 坐标使用正弦函数实现弹跳：abs(sin(x)) 创建弹跳曲线
         command.videoFilters([
-          `pad=iw:ih+${bounceHeight*2}:0:${bounceHeight}`,
-          `crop=iw:ih:0:'${bounceHeight}+${bounceHeight}*abs(sin(8*PI*t/${duration}))'`
+          `pad=iw:ih+${bounceHeight}:0:${bounceHeight/2}`,  // 扩大画布，留出弹跳空间
+          `crop=iw:ih:0:${bounceHeight/2}+${bounceHeight/2}*abs(sin(${bounceFreq}*2*PI*t/${duration}))`  // Y坐标随时间弹跳
         ].join(','));
+        console.log(`  📊 弹跳参数: 高度=${bounceHeight}px, 频率=${bounceFreq}次`);
         break;
 
       case 'none':
