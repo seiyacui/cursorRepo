@@ -64,13 +64,19 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="backgroundMusic">背景音乐 <span class="required">*</span></label>
-                <input type="file" id="backgroundMusic" name="background_music" accept="audio/*" required>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="file" id="backgroundMusic" name="background_music" accept="audio/*" required style="flex: 1;">
+                  <button type="button" class="btn btn-danger" id="btnClearMusic" onclick="clearFile('backgroundMusic')" style="display: none; padding: 8px 15px;">🗑️ 删除</button>
+                </div>
                 <span class="file-name" id="musicFileName">未选择文件</span>
               </div>
 
               <div class="form-group">
                 <label for="backgroundImage">背景图片（可选）</label>
-                <input type="file" id="backgroundImage" name="background_image" accept="image/*">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="file" id="backgroundImage" name="background_image" accept="image/*" style="flex: 1;">
+                  <button type="button" class="btn btn-danger" id="btnClearImage" onclick="clearFile('backgroundImage')" style="display: none; padding: 8px 15px;">🗑️ 删除</button>
+                </div>
                 <span class="file-name" id="imageFileName">未选择文件</span>
               </div>
             </div>
