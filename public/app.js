@@ -1,10 +1,10 @@
 // Slideshow Video Generator - Frontend Application
-// Version: 1.0.3 (2025-10-10 - Emergency Fix)
+// Version: 1.0.4 (2025-10-10 - Fault Tolerant Fix)
 
 // ==================== Configuration ====================
 const API_BASE = window.location.origin;
 const WS_URL = `ws://${window.location.host}`;
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 
 // ==================== State ====================
 let ws = null;
@@ -391,8 +391,11 @@ function startProgressPolling(videoId) {
     progressPollingInterval = null;
   }
 
+  let pollCount = 0;
+
   // 定义轮询函数
   const pollProgress = async () => {
+    pollCount++;
     try {
       const response = await fetch(`${API_BASE}/api/videos/${videoId}`);
       const data = await response.json();
@@ -416,8 +419,18 @@ function startProgressPolling(videoId) {
         progressPercent.textContent = `${video.generation_progress}%`;
         progressBar.style.width = `${video.generation_progress}%`;
 
+        // 容错判断：多种方式检查是否完成
+        const isCompleted = video.generation_status === 'completed' || 
+                           String(video.generation_status).trim() === 'completed' ||
+                           video.generation_progress >= 100;
+        
+        // 详细日志（每5次轮询显示一次）
+        if (pollCount % 5 === 0) {
+          console.log(`[容错检查] 状态="${video.generation_status}", 进度=${video.generation_progress}%, 判定完成=${isCompleted}`);
+        }
+
         // 如果完成或失败，停止轮询
-        if (video.generation_status === 'completed') {
+        if (isCompleted) {
           console.log('%c✅ 视频生成完成！停止所有计时器...', 'color: #4CAF50; font-size: 14px; font-weight: bold;');
           
           // 立即停止所有计时器
