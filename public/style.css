@@ -1,4 +1,4 @@
-/* YouTube Video Downloader - Modern UI Styles */
+/* Slideshow Video Generator - Modern UI Styles */
 
 * {
   margin: 0;
@@ -79,6 +79,43 @@ body {
   padding-bottom: 40px;
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-btn {
+  padding: 12px 24px;
+  border: none;
+  background: var(--white);
+  color: var(--text-dark);
+  border-radius: 8px 8px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: var(--shadow);
+}
+
+.tab-btn:hover {
+  background: var(--light-bg);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: var(--white);
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
 /* Card */
 .card {
   background: var(--white);
@@ -96,7 +133,20 @@ body {
   border-bottom: 2px solid var(--light-bg);
 }
 
+.card h3 {
+  font-size: 18px;
+  color: var(--text-dark);
+  margin: 20px 0 15px;
+}
+
 /* Form */
+.form-section {
+  margin: 30px 0;
+  padding: 20px;
+  background: var(--light-bg);
+  border-radius: 8px;
+}
+
 .form-group {
   margin-bottom: 20px;
 }
@@ -108,8 +158,14 @@ body {
   color: var(--text-dark);
 }
 
+.form-group .required {
+  color: var(--danger-color);
+}
+
 .form-group input[type="text"],
+.form-group input[type="number"],
 .form-group input[type="date"],
+.form-group input[type="color"],
 .form-group select,
 .form-group textarea {
   width: 100%;
@@ -120,7 +176,12 @@ body {
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 
+.form-group input[type="file"] {
+  display: none;
+}
+
 .form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
 .form-group input[type="date"]:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -131,7 +192,7 @@ body {
 
 .form-group textarea {
   resize: vertical;
-  font-family: monospace;
+  font-family: inherit;
 }
 
 .form-group input[type="checkbox"] {
@@ -139,6 +200,27 @@ body {
   height: 18px;
   margin-right: 8px;
   cursor: pointer;
+}
+
+.file-name {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--light-bg);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+.form-group label + input[type="file"] + .file-name {
+  cursor: pointer;
+  background: var(--primary-color);
+  color: var(--white);
+  transition: background 0.3s;
+}
+
+.form-group label + input[type="file"] + .file-name:hover {
+  background: var(--primary-dark);
 }
 
 .form-row {
@@ -225,6 +307,36 @@ body {
   background: #c82333;
 }
 
+/* Preview */
+.preview-card {
+  max-width: 800px;
+  margin: 0 auto 25px;
+}
+
+.preview-container {
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+}
+
+#previewCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  text-align: center;
+  padding: 40px;
+  word-wrap: break-word;
+}
+
 /* Progress Section */
 .progress-section {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -234,10 +346,6 @@ body {
 .progress-section h2 {
   color: var(--white);
   border-bottom-color: rgba(255, 255, 255, 0.2);
-}
-
-.batch-progress {
-  margin-bottom: 30px;
 }
 
 .progress-info {
@@ -252,6 +360,7 @@ body {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 15px;
   overflow: hidden;
+  margin-bottom: 20px;
 }
 
 .progress-fill {
@@ -264,30 +373,6 @@ body {
   color: var(--white);
   font-weight: 600;
   font-size: 14px;
-}
-
-.current-downloads {
-  display: grid;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.download-item {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 15px;
-  border-radius: 8px;
-}
-
-.download-item-title {
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.download-item-progress {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
-  margin-bottom: 5px;
 }
 
 .elapsed-time {
@@ -323,14 +408,6 @@ body {
   border-radius: 8px;
 }
 
-.report-stat.success {
-  background: rgba(40, 167, 69, 0.3);
-}
-
-.report-stat.failed {
-  background: rgba(220, 53, 69, 0.3);
-}
-
 .report-label {
   font-size: 14px;
   opacity: 0.9;
@@ -342,33 +419,9 @@ body {
   font-weight: 700;
 }
 
-.report-links {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 20px;
-  border-radius: 8px;
+.report-download {
+  text-align: center;
   margin-bottom: 20px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.report-link-item {
-  padding: 10px;
-  margin-bottom: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.report-link-item a {
-  color: var(--white);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.report-link-item a:hover {
-  text-decoration: underline;
 }
 
 /* Export Section */
@@ -447,7 +500,7 @@ body {
   color: var(--success-color);
 }
 
-.status-downloading {
+.status-generating {
   background: rgba(255, 193, 7, 0.1);
   color: var(--warning-color);
 }
@@ -473,6 +526,13 @@ body {
 
 #pageInfo {
   font-weight: 600;
+}
+
+.page-size-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
 }
 
 /* Toast Notification */

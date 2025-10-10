@@ -1,9 +1,9 @@
 // Export Service - Export video list to different formats
 const fs = require('fs').promises;
 const path = require('path');
+const ExcelJS = require('exceljs');
 const { marked } = require('marked');
 const pdf = require('html-pdf-node');
-const puppeteer = require('puppeteer');
 
 class ExportService {
   constructor() {
@@ -30,12 +30,8 @@ class ExportService {
   // 格式化时长
   formatDuration(seconds) {
     if (!seconds) return '0:00';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
+    const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
-    if (h > 0) {
-      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
@@ -43,54 +39,88 @@ class ExportService {
   formatDate(date) {
     if (!date) return 'N/A';
     const d = new Date(date);
-    return d.toLocaleString('zh-CN', { 
-      year: 'numeric', 
-      month: '2-digit', 
+    return d.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
     });
   }
 
-  // 生成 HTML 表格
-  generateHTMLTable(videos) {
-    const rows = videos.map((video, index) => `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${this.escapeHtml(video.title || video.filename || 'N/A')}</td>
-        <td>${this.escapeHtml(video.video_format || 'N/A')}</td>
-        <td>${this.escapeHtml(video.audio_format || 'N/A')}</td>
-        <td>${this.formatDuration(video.duration)}</td>
-        <td>${this.formatFileSize(video.video_file_size)}</td>
-        <td>${this.formatFileSize(video.audio_file_size)}</td>
-        <td>${this.formatDate(video.created_at)}</td>
-        <td><span class="status-${video.download_status}">${this.getStatusText(video.download_status)}</span></td>
-      </tr>
-    `).join('');
-
-    return rows;
-  }
-
-  // 获取状态文本
-  getStatusText(status) {
-    const statusMap = {
-      'pending': '待下载',
-      'downloading': '下载中',
-      'completed': '已完成',
-      'failed': '失败'
-    };
-    return statusMap[status] || status;
-  }
-
   // HTML 转义
   escapeHtml(text) {
     if (!text) return '';
-    return text
+    return String(text)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // 导出为 Excel
+  async exportToExcel(videos, filters = {}) {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('视频列表', {
+      properties: { defaultColWidth: 20 }
+    });
+
+    // 设置列
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: '文本内容', key: 'text_content', width: 50 },
+      { header: '视频文件名', key: 'video_filename', width: 30 },
+      { header: '视频格式', key: 'video_format', width: 15 },
+      { header: '时长', key: 'duration', width: 15 },
+      { header: '文件大小', key: 'file_size', width: 15 },
+      { header: '创建日期', key: 'created_at', width: 25 }
+    ];
+
+    // 设置表头样式
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' }
+    };
+    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // 添加数据
+    videos.forEach(video => {
+      worksheet.addRow({
+        id: video.id,
+        text_content: video.text_content || '',
+        video_filename: video.video_filename || 'N/A',
+        video_format: video.video_format || 'N/A',
+        duration: this.formatDuration(video.video_duration),
+        file_size: this.formatFileSize(video.video_file_size),
+        created_at: this.formatDate(video.created_at)
+      });
+    });
+
+    // 设置数据行样式
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.alignment = { vertical: 'middle', wrapText: true };
+        row.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      }
+    });
+
+    // 保存文件
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `video_list_${timestamp}.xlsx`;
+    const filepath = path.join(this.exportPath, filename);
+
+    await workbook.xlsx.writeFile(filepath);
+    console.log(`✅ Excel导出成功: ${filepath}`);
+
+    return { filename, filepath };
   }
 
   // 导出为 HTML
@@ -99,16 +129,27 @@ class ExportService {
     const filename = `video_list_${timestamp}.html`;
     const filepath = path.join(this.exportPath, filename);
 
-    const totalVideoSize = videos.reduce((sum, v) => sum + (v.video_file_size || 0), 0);
-    const totalAudioSize = videos.reduce((sum, v) => sum + (v.audio_file_size || 0), 0);
-    const totalDuration = videos.reduce((sum, v) => sum + (v.duration || 0), 0);
+    const totalSize = videos.reduce((sum, v) => sum + (v.video_file_size || 0), 0);
+    const totalDuration = videos.reduce((sum, v) => sum + (v.video_duration || 0), 0);
+
+    const tableRows = videos.map((video, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${this.escapeHtml(video.text_content).substring(0, 100)}${video.text_content.length > 100 ? '...' : ''}</td>
+        <td>${this.escapeHtml(video.video_filename || 'N/A')}</td>
+        <td>${this.escapeHtml(video.video_format || 'N/A')}</td>
+        <td>${this.formatDuration(video.video_duration)}</td>
+        <td>${this.formatFileSize(video.video_file_size)}</td>
+        <td>${this.formatDate(video.created_at)}</td>
+      </tr>
+    `).join('');
 
     const html = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube视频下载列表</title>
+  <title>幻灯片视频列表</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -179,10 +220,6 @@ class ExportService {
       top: 0;
     }
     tr:hover { background: #f8f9fa; }
-    .status-completed { color: #28a745; font-weight: 600; }
-    .status-failed { color: #dc3545; font-weight: 600; }
-    .status-downloading { color: #ffc107; font-weight: 600; }
-    .status-pending { color: #6c757d; font-weight: 600; }
     .footer {
       text-align: center;
       padding: 20px;
@@ -195,7 +232,7 @@ class ExportService {
 <body>
   <div class="container">
     <div class="header">
-      <h1>📹 YouTube视频下载列表</h1>
+      <h1>🎬 幻灯片视频列表</h1>
       <p>导出时间: ${this.formatDate(new Date())}</p>
     </div>
     
@@ -205,12 +242,8 @@ class ExportService {
         <div class="value">${videos.length}</div>
       </div>
       <div class="stat-card">
-        <div class="label">总视频大小</div>
-        <div class="value">${this.formatFileSize(totalVideoSize)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="label">总音频大小</div>
-        <div class="value">${this.formatFileSize(totalAudioSize)}</div>
+        <div class="label">总文件大小</div>
+        <div class="value">${this.formatFileSize(totalSize)}</div>
       </div>
       <div class="stat-card">
         <div class="label">总时长</div>
@@ -223,24 +256,22 @@ class ExportService {
         <thead>
           <tr>
             <th>#</th>
-            <th>文件名</th>
+            <th>文本内容</th>
+            <th>视频文件名</th>
             <th>视频格式</th>
-            <th>音频格式</th>
             <th>时长</th>
-            <th>视频大小</th>
-            <th>音频大小</th>
+            <th>文件大小</th>
             <th>创建日期</th>
-            <th>状态</th>
           </tr>
         </thead>
         <tbody>
-          ${this.generateHTMLTable(videos)}
+          ${tableRows}
         </tbody>
       </table>
     </div>
 
     <div class="footer">
-      <p>YouTube视频批量下载器 - 导出报告</p>
+      <p>幻灯片视频生成器 - 导出报告</p>
       <p>© 2024 All Rights Reserved</p>
     </div>
   </div>
@@ -249,7 +280,7 @@ class ExportService {
 
     await fs.writeFile(filepath, html, 'utf8');
     console.log(`✅ HTML导出成功: ${filepath}`);
-    
+
     return { filename, filepath };
   }
 
@@ -259,40 +290,39 @@ class ExportService {
     const filename = `video_list_${timestamp}.md`;
     const filepath = path.join(this.exportPath, filename);
 
-    const totalVideoSize = videos.reduce((sum, v) => sum + (v.video_file_size || 0), 0);
-    const totalAudioSize = videos.reduce((sum, v) => sum + (v.audio_file_size || 0), 0);
-    const totalDuration = videos.reduce((sum, v) => sum + (v.duration || 0), 0);
+    const totalSize = videos.reduce((sum, v) => sum + (v.video_file_size || 0), 0);
+    const totalDuration = videos.reduce((sum, v) => sum + (v.video_duration || 0), 0);
 
-    let markdown = `# YouTube视频下载列表\n\n`;
+    let markdown = `# 幻灯片视频列表\n\n`;
     markdown += `**导出时间**: ${this.formatDate(new Date())}\n\n`;
-    
+
     markdown += `## 统计信息\n\n`;
     markdown += `- 总视频数: ${videos.length}\n`;
-    markdown += `- 总视频大小: ${this.formatFileSize(totalVideoSize)}\n`;
-    markdown += `- 总音频大小: ${this.formatFileSize(totalAudioSize)}\n`;
+    markdown += `- 总文件大小: ${this.formatFileSize(totalSize)}\n`;
     markdown += `- 总时长: ${this.formatDuration(totalDuration)}\n\n`;
 
     markdown += `## 视频列表\n\n`;
-    markdown += `| # | 文件名 | 视频格式 | 音频格式 | 时长 | 视频大小 | 音频大小 | 创建日期 | 状态 |\n`;
-    markdown += `|---|--------|----------|----------|------|----------|----------|----------|------|\n`;
+    markdown += `| # | 文本内容 | 视频文件名 | 格式 | 时长 | 大小 | 创建日期 |\n`;
+    markdown += `|---|----------|------------|------|------|------|----------|\n`;
 
     videos.forEach((video, index) => {
-      markdown += `| ${index + 1} | ${video.title || video.filename || 'N/A'} | `;
+      const textContent = (video.text_content || '').substring(0, 50);
+      const textDisplay = textContent + (video.text_content.length > 50 ? '...' : '');
+      
+      markdown += `| ${index + 1} | ${textDisplay} | `;
+      markdown += `${video.video_filename || 'N/A'} | `;
       markdown += `${video.video_format || 'N/A'} | `;
-      markdown += `${video.audio_format || 'N/A'} | `;
-      markdown += `${this.formatDuration(video.duration)} | `;
+      markdown += `${this.formatDuration(video.video_duration)} | `;
       markdown += `${this.formatFileSize(video.video_file_size)} | `;
-      markdown += `${this.formatFileSize(video.audio_file_size)} | `;
-      markdown += `${this.formatDate(video.created_at)} | `;
-      markdown += `${this.getStatusText(video.download_status)} |\n`;
+      markdown += `${this.formatDate(video.created_at)} |\n`;
     });
 
     markdown += `\n---\n\n`;
-    markdown += `*由YouTube视频批量下载器生成*\n`;
+    markdown += `*由幻灯片视频生成器生成*\n`;
 
     await fs.writeFile(filepath, markdown, 'utf8');
     console.log(`✅ Markdown导出成功: ${filepath}`);
-    
+
     return { filename, filepath };
   }
 
@@ -302,24 +332,25 @@ class ExportService {
       // 先生成HTML
       const htmlResult = await this.exportToHTML(videos, filters);
       const htmlContent = await fs.readFile(htmlResult.filepath, 'utf8');
-      
+
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `video_list_${timestamp}.pdf`;
       const filepath = path.join(this.exportPath, filename);
 
       // 使用 html-pdf-node 转换为 PDF
-      const options = { 
+      const options = {
         format: 'A4',
+        landscape: true,
         margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' },
         printBackground: true
       };
-      
+
       const file = { content: htmlContent };
       const pdfBuffer = await pdf.generatePdf(file, options);
-      
+
       await fs.writeFile(filepath, pdfBuffer);
       console.log(`✅ PDF导出成功: ${filepath}`);
-      
+
       return { filename, filepath };
     } catch (error) {
       console.error('PDF导出失败:', error);
@@ -327,50 +358,12 @@ class ExportService {
     }
   }
 
-  // 导出为 PNG (使用 Puppeteer 截图)
-  async exportToPNG(videos, filters = {}) {
-    try {
-      // 先生成HTML
-      const htmlResult = await this.exportToHTML(videos, filters);
-      
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `video_list_${timestamp}.png`;
-      const filepath = path.join(this.exportPath, filename);
-
-      // 使用 Puppeteer 生成截图
-      const browser = await puppeteer.launch({
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-      
-      const page = await browser.newPage();
-      await page.setViewport({ width: 1400, height: 900 });
-      
-      // 加载HTML文件
-      await page.goto(`file://${path.resolve(htmlResult.filepath)}`, {
-        waitUntil: 'networkidle0'
-      });
-      
-      // 截取整个页面
-      await page.screenshot({
-        path: filepath,
-        fullPage: true
-      });
-      
-      await browser.close();
-      
-      console.log(`✅ PNG导出成功: ${filepath}`);
-      
-      return { filename, filepath };
-    } catch (error) {
-      console.error('PNG导出失败:', error);
-      throw new Error('PNG导出失败: ' + error.message);
-    }
-  }
-
   // 统一导出接口
   async export(videos, format, filters = {}) {
     switch (format.toLowerCase()) {
+      case 'excel':
+      case 'xlsx':
+        return await this.exportToExcel(videos, filters);
       case 'html':
         return await this.exportToHTML(videos, filters);
       case 'markdown':
@@ -378,15 +371,13 @@ class ExportService {
         return await this.exportToMarkdown(videos, filters);
       case 'pdf':
         return await this.exportToPDF(videos, filters);
-      case 'png':
-        return await this.exportToPNG(videos, filters);
       default:
         throw new Error(`不支持的导出格式: ${format}`);
     }
   }
 
-  // 清理旧的导出文件（保留最近N个）
-  async cleanupOldExports(keepCount = 10) {
+  // 清理旧的导出文件
+  async cleanupOldExports(keepCount = 20) {
     try {
       const files = await fs.readdir(this.exportPath);
       const fileStats = await Promise.all(
@@ -397,11 +388,9 @@ class ExportService {
         }))
       );
 
-      // 按修改时间排序
       fileStats.sort((a, b) => b.mtime - a.mtime);
-
-      // 删除旧文件
       const toDelete = fileStats.slice(keepCount);
+
       for (const file of toDelete) {
         await fs.unlink(file.path);
         console.log(`🗑️  删除旧导出文件: ${file.name}`);

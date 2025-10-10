@@ -1,13 +1,13 @@
-// Main Server File - YouTube Video Downloader
+// Main Server File - Slideshow Video Generator
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const path = require('path');
+const multer = require('multer');
 require('dotenv').config();
 
 const db = require('./db/database');
-const VideoDownloader = require('./services/downloader');
-const NotificationService = require('./services/notification-adapter');
+const VideoGenerator = require('./services/video-generator');
 const ExportService = require('./services/exporter');
 const WebSocketServer = require('./services/websocket');
 
@@ -17,9 +17,28 @@ const server = http.createServer(app);
 
 // 初始化服务
 const wsServer = new WebSocketServer(server);
-const downloader = new VideoDownloader(wsServer);
-const notificationService = new NotificationService();
+const videoGenerator = new VideoGenerator(wsServer);
 const exportService = new ExportService();
+
+// Multer 配置 - 文件上传
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = process.env.UPLOAD_PATH || './uploads';
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024 // 100MB
+  }
+});
 
 // 中间件
 app.use(cors());
@@ -28,7 +47,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // 静态文件服务
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/downloads', express.static(path.join(__dirname, 'downloads')));
+app.use('/outputs', express.static(path.join(__dirname, 'outputs')));
 app.use('/exports', express.static(path.join(__dirname, 'exports')));
 
 // 请求日志中间件
@@ -65,141 +84,98 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// 获取视频信息（不下载）
-app.post('/api/videos/info', async (req, res) => {
-  try {
-    const { url } = req.body;
-    
-    if (!url) {
-      return res.status(400).json({
-        success: false,
-        error: '缺少视频URL'
-      });
-    }
+// 创建视频记录（带文件上传）
+app.post('/api/videos/create',
+  upload.fields([
+    { name: 'background_image', maxCount: 1 },
+    { name: 'background_music', maxCount: 1 },
+    { name: 'custom_font', maxCount: 1 }
+  ]),
+  async (req, res) => {
+    try {
+      const videoData = {
+        text_content: req.body.text_content,
+        background_color: req.body.background_color || '#000000',
+        font_family: req.body.font_family || 'Arial',
+        font_size: parseInt(req.body.font_size) || 48,
+        font_color: req.body.font_color || '#FFFFFF',
+        font_background_color: req.body.font_background_color || 'transparent',
+        text_margin_top: parseInt(req.body.text_margin_top) || 100,
+        text_margin_bottom: parseInt(req.body.text_margin_bottom) || 100,
+        text_margin_left: parseInt(req.body.text_margin_left) || 100,
+        text_margin_right: parseInt(req.body.text_margin_right) || 100,
+        slide_duration: parseInt(req.body.slide_duration) || 5,
+        text_animation: req.body.text_animation || 'fade',
+        video_format: req.body.video_format || 'mp4',
+        video_width: parseInt(req.body.video_width) || 1920,
+        video_height: parseInt(req.body.video_height) || 1080,
+        video_fps: parseInt(req.body.video_fps) || 30
+      };
 
-    const info = await downloader.getVideoInfo(url);
-    res.json({
-      success: true,
-      data: info
-    });
-  } catch (error) {
-    console.error('获取视频信息失败:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// 批量添加视频到数据库（准备下载）
-app.post('/api/videos/batch-add', async (req, res) => {
-  try {
-    const { urls, videoFormat, audioFormat, downloadAudio } = req.body;
-    
-    if (!urls || !Array.isArray(urls) || urls.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: '缺少视频URL列表'
-      });
-    }
-
-    const videos = [];
-    const errors = [];
-
-    // 批量获取视频信息并创建数据库记录
-    for (const url of urls) {
-      try {
-        const info = await downloader.getVideoInfo(url);
-        
-        const video = await db.videos.create({
-          video_url: url,
-          video_id: info.video_id,
-          title: info.title,
-          filename: `${info.video_id}.${videoFormat || 'mp4'}`,
-          video_format: videoFormat || 'mp4',
-          audio_format: downloadAudio ? (audioFormat || 'mp3') : null,
-          duration: info.duration,
-          thumbnail_url: info.thumbnail
+      // 添加上传的文件路径
+      if (req.files.background_image) {
+        videoData.background_image = req.files.background_image[0].path;
+      }
+      if (req.files.background_music) {
+        videoData.background_music = req.files.background_music[0].path;
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: '背景音乐是必需的'
         });
-        
-        videos.push(video);
-      } catch (error) {
-        console.error(`获取视频信息失败 (${url}):`, error);
-        errors.push({ url, error: error.message });
       }
+      if (req.files.custom_font) {
+        videoData.custom_font = req.files.custom_font[0].path;
+      }
+
+      const video = await db.videos.create(videoData);
+
+      res.json({
+        success: true,
+        data: video
+      });
+    } catch (error) {
+      console.error('创建视频记录失败:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+);
+
+// 生成视频
+app.post('/api/videos/:id/generate', async (req, res) => {
+  try {
+    const videoId = req.params.id;
+    const video = await db.videos.getById(videoId);
+
+    if (!video) {
+      return res.status(404).json({
+        success: false,
+        error: '视频记录不存在'
+      });
     }
 
+    // 异步生成视频
     res.json({
       success: true,
-      data: {
-        added: videos.length,
-        failed: errors.length,
-        videos,
-        errors
-      }
+      message: '视频生成任务已启动',
+      videoId
     });
+
+    // 在后台生成视频
+    videoGenerator.generateVideo(videoId).catch(error => {
+      console.error('视频生成失败:', error);
+      wsServer.sendError(error);
+    });
+
   } catch (error) {
-    console.error('批量添加视频失败:', error);
+    console.error('启动视频生成失败:', error);
     res.status(500).json({
       success: false,
       error: error.message
     });
-  }
-});
-
-// 开始批量下载
-app.post('/api/videos/batch-download', async (req, res) => {
-  try {
-    const { videoIds, videoFormat, audioFormat, downloadAudio, batchName } = req.body;
-    
-    if (!videoIds || !Array.isArray(videoIds) || videoIds.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: '缺少视频ID列表'
-      });
-    }
-
-    // 发送开始通知
-    await notificationService.sendDownloadStarted(videoIds.length);
-
-    // 异步执行下载任务
-    res.json({
-      success: true,
-      message: '下载任务已启动',
-      data: {
-        videoCount: videoIds.length,
-        status: 'started'
-      }
-    });
-
-    // 在后台执行下载
-    const startTime = Date.now();
-    const result = await downloader.downloadBatch(videoIds, {
-      videoFormat,
-      audioFormat,
-      downloadAudio,
-      batchName
-    });
-
-    const totalTime = (Date.now() - startTime) / 1000;
-
-    // 获取所有视频的详细信息
-    const videos = await db.batches.getVideos(result.batchId);
-
-    // 发送完成通知
-    await notificationService.sendBatchDownloadComplete(result, videos);
-
-    // 通过 WebSocket 发送完成消息
-    wsServer.sendNotification({
-      type: 'batch_complete',
-      batchId: result.batchId,
-      result,
-      totalTime
-    });
-
-  } catch (error) {
-    console.error('批量下载失败:', error);
-    wsServer.sendError(error);
   }
 });
 
@@ -207,13 +183,13 @@ app.post('/api/videos/batch-download', async (req, res) => {
 app.get('/api/videos', async (req, res) => {
   try {
     const { keyword, start_date, end_date, status, limit, offset } = req.query;
-    
+
     const result = await db.videos.list({
       keyword,
       start_date,
       end_date,
       status,
-      limit: parseInt(limit) || 100,
+      limit: limit || 50,
       offset: parseInt(offset) || 0
     });
 
@@ -234,7 +210,7 @@ app.get('/api/videos', async (req, res) => {
 app.get('/api/videos/:id', async (req, res) => {
   try {
     const video = await db.videos.getById(req.params.id);
-    
+
     if (!video) {
       return res.status(404).json({
         success: false,
@@ -258,13 +234,9 @@ app.get('/api/videos/:id', async (req, res) => {
 // 删除视频
 app.delete('/api/videos/:id', async (req, res) => {
   try {
-    // 先清理文件
-    await downloader.cleanupDownloadedFiles(req.params.id);
-    
-    // 再删除数据库记录
-    const video = await db.videos.delete(req.params.id);
-    
-    if (!video) {
+    const success = await videoGenerator.deleteVideo(req.params.id);
+
+    if (!success) {
       return res.status(404).json({
         success: false,
         error: '视频不存在'
@@ -273,7 +245,7 @@ app.delete('/api/videos/:id', async (req, res) => {
 
     res.json({
       success: true,
-      data: video
+      message: '视频已删除'
     });
   } catch (error) {
     console.error('删除视频失败:', error);
@@ -288,7 +260,7 @@ app.delete('/api/videos/:id', async (req, res) => {
 app.post('/api/videos/export', async (req, res) => {
   try {
     const { format, filters } = req.body;
-    
+
     if (!format) {
       return res.status(400).json({
         success: false,
@@ -298,7 +270,7 @@ app.post('/api/videos/export', async (req, res) => {
 
     // 获取要导出的视频列表
     const result = await db.videos.list(filters || {});
-    
+
     if (result.videos.length === 0) {
       return res.status(400).json({
         success: false,
@@ -308,7 +280,7 @@ app.post('/api/videos/export', async (req, res) => {
 
     // 导出
     const exportResult = await exportService.export(result.videos, format, filters);
-    
+
     res.json({
       success: true,
       data: {
@@ -328,69 +300,40 @@ app.post('/api/videos/export', async (req, res) => {
   }
 });
 
-// 取消下载
-app.post('/api/videos/:id/cancel', async (req, res) => {
+// 生成预览数据
+app.post('/api/videos/preview', async (req, res) => {
   try {
-    const success = await downloader.cancelDownload(req.params.id);
-    
-    res.json({
-      success,
-      message: success ? '下载已取消' : '未找到正在进行的下载任务'
-    });
-  } catch (error) {
-    console.error('取消下载失败:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
+    const {
+      text_content,
+      background_color,
+      font_family,
+      font_size,
+      font_color,
+      font_background_color,
+      text_margin_top,
+      text_margin_bottom,
+      text_margin_left,
+      text_margin_right
+    } = req.body;
 
-// 获取批次列表
-app.get('/api/batches', async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT * FROM download_batches
-      ORDER BY created_at DESC
-      LIMIT 50
-    `);
-
-    res.json({
-      success: true,
-      data: result.rows
-    });
-  } catch (error) {
-    console.error('获取批次列表失败:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// 获取批次详情
-app.get('/api/batches/:id', async (req, res) => {
-  try {
-    const batch = await db.batches.getById(req.params.id);
-    
-    if (!batch) {
-      return res.status(404).json({
-        success: false,
-        error: '批次不存在'
-      });
-    }
-
-    const videos = await db.batches.getVideos(req.params.id);
-    
+    // 返回预览配置
     res.json({
       success: true,
       data: {
-        ...batch,
-        videos
+        text_content,
+        background_color,
+        font_family,
+        font_size,
+        font_color,
+        font_background_color,
+        text_margin_top,
+        text_margin_bottom,
+        text_margin_left,
+        text_margin_right
       }
     });
   } catch (error) {
-    console.error('获取批次详情失败:', error);
+    console.error('生成预览失败:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -421,10 +364,10 @@ const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
-    // 检查 yt-dlp
-    const ytDlpInstalled = await downloader.checkYtDlp();
-    if (!ytDlpInstalled) {
-      console.warn('⚠️  警告: yt-dlp 未安装，下载功能将无法使用');
+    // 检查 FFmpeg
+    const ffmpegInstalled = await videoGenerator.checkFFmpeg();
+    if (!ffmpegInstalled) {
+      console.warn('⚠️  警告: FFmpeg 未安装，视频生成功能将无法使用');
     }
 
     // 测试数据库连接
@@ -434,13 +377,12 @@ async function startServer() {
     // 启动服务器
     server.listen(PORT, () => {
       console.log('\n' + '='.repeat(50));
-      console.log('🚀 YouTube视频批量下载器启动成功！');
+      console.log('🎬 幻灯片视频生成器启动成功！');
       console.log('='.repeat(50));
       console.log(`📡 HTTP服务: http://localhost:${PORT}`);
       console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
-      console.log(`📁 前端页面: http://localhost:${PORT}/index.html`);
-      console.log(`💾 下载目录: ${downloader.downloadPath}`);
-      console.log(`📊 并发下载: ${downloader.concurrentDownloads}`);
+      console.log(`🌐 前端页面: http://localhost:${PORT}/index.html`);
+      console.log(`📁 输出目录: ${videoGenerator.outputPath}`);
       console.log('='.repeat(50) + '\n');
     });
   } catch (error) {

@@ -5,9 +5,13 @@ package-lock.json
 # Environment variables
 .env
 
-# Downloads
-downloads/*
-!downloads/.gitkeep
+# Uploads and Outputs
+uploads/*
+!uploads/.gitkeep
+outputs/*
+!outputs/.gitkeep
+temp/*
+!temp/.gitkeep
 
 # Exports
 exports/*
@@ -28,7 +32,3 @@ Thumbs.db
 *.swp
 *.swo
 *~
-
-# Temporary files
-tmp/
-temp/

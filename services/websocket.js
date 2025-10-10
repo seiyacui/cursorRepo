@@ -25,7 +25,7 @@ class WebSocketServer {
         try {
           const data = JSON.parse(message);
           console.log('📨 收到客户端消息:', data);
-          
+
           // 处理ping消息
           if (data.type === 'ping') {
             ws.send(JSON.stringify({ type: 'pong', timestamp: new Date().toISOString() }));
@@ -89,34 +89,16 @@ class WebSocketServer {
     }
   }
 
-  // 发送下载进度更新
-  sendDownloadProgress(videoId, progress) {
+  // 发送生成进度更新
+  sendGenerationProgress(videoId, progress) {
     this.broadcast({
-      type: 'download_progress',
+      type: 'generation_progress',
       videoId,
       data: progress
     });
   }
 
-  // 发送批次进度更新
-  sendBatchProgress(batchId, progress) {
-    this.broadcast({
-      type: 'batch_progress',
-      batchId,
-      data: progress
-    });
-  }
-
-  // 发送视频信息更新
-  sendVideoUpdate(videoId, videoData) {
-    this.broadcast({
-      type: 'video_update',
-      videoId,
-      data: videoData
-    });
-  }
-
-  // 发送系统通知
+  // 发送通知
   sendNotification(notification) {
     this.broadcast({
       type: 'notification',
@@ -145,11 +127,11 @@ class WebSocketServer {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
     }
-    
+
     this.clients.forEach((client) => {
       client.close();
     });
-    
+
     this.wss.close(() => {
       console.log('WebSocket服务器已关闭');
     });

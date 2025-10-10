@@ -1,19 +1,22 @@
-# 快速启动指南
+# 快速启动指南 - 幻灯片视频生成器
 
 ## 🚀 5分钟快速部署
 
 ### 第一步：安装依赖
 
 ```bash
-# 安装 Node.js 依赖
+# 1. 安装 Node.js 依赖
 npm install
 
-# 安装 yt-dlp (macOS)
-brew install yt-dlp
+# 2. 安装 FFmpeg (macOS)
+brew install ffmpeg
 
-# 或者 (Linux)
-sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-sudo chmod a+rx /usr/local/bin/yt-dlp
+# 或者 (Ubuntu/Debian)
+sudo apt update
+sudo apt install ffmpeg
+
+# 3. 验证 FFmpeg 安装
+ffmpeg -version
 ```
 
 ### 第二步：配置数据库
@@ -23,27 +26,22 @@ sudo chmod a+rx /usr/local/bin/yt-dlp
 psql -U postgres
 
 # 2. 创建数据库
-CREATE DATABASE youtube_downloader WITH ENCODING 'UTF8';
+CREATE DATABASE slideshow_generator WITH ENCODING 'UTF8';
 
 # 3. 退出
 \q
 
-# 4. 初始化表结构
+# 4. 配置环境变量
+cp .env.example .env
+
+# 5. 编辑 .env 文件，设置数据库密码
+nano .env  # 或使用其他编辑器
+
+# 6. 初始化表结构
 npm run init-db
 ```
 
-### 第三步：配置环境变量
-
-```bash
-# 复制环境变量模板
-cp .env.example .env
-
-# 编辑 .env 文件，至少配置以下内容：
-# DB_PASSWORD=你的数据库密码
-# PORT=3000
-```
-
-### 第四步：启动服务
+### 第三步：启动服务
 
 ```bash
 # 启动服务器
@@ -53,55 +51,60 @@ npm start
 npm run dev
 ```
 
-### 第五步：访问应用
+### 第四步：访问应用
 
-打开浏览器访问：http://localhost:3000
+打开浏览器访问：**http://localhost:3000**
 
-## 📋 使用流程
+## 📋 基本使用流程
 
-1. **添加视频**
-   - 在输入框中粘贴YouTube视频URL（每行一个）
-   - 选择视频格式和音频选项
-   - 点击「添加到列表」
+### 生成第一个视频
 
-2. **开始下载**
-   - 点击「开始下载」按钮
-   - 查看实时下载进度
-   - 等待下载完成
+1. **准备素材**
+   - 一段文本内容
+   - 一个背景音乐文件（MP3、WAV等）
+   - （可选）一张背景图片
 
-3. **查看结果**
-   - 查看下载报告
-   - 点击视频/音频链接下载文件
-   - 在视频列表中管理已下载的内容
+2. **在「生成视频」TAB中：**
+   - 输入文本内容
+   - 上传背景音乐
+   - 上传背景图片（或选择背景颜色）
+   - 调整字体样式
+   - 设置文本位置
+   - 选择动画效果
+   - 点击「实时预览」查看效果
+   - 点击「生成视频」
 
-4. **导出数据**
-   - 使用搜索功能筛选视频
-   - 点击导出按钮（HTML/PDF/Markdown/PNG）
+3. **等待生成**
+   - 查看实时进度
+   - 查看累计耗时
+   - 生成完成后自动显示报告
+
+4. **下载视频**
+   - 点击下载按钮
+   - 保存到本地
+
+### 管理视频列表
+
+1. **切换到「视频列表」TAB**
+
+2. **查看所有视频**
+   - 浏览生成的视频列表
+   - 调整每页显示数量（10/20/30/50/100/全部）
+
+3. **搜索和筛选**
+   - 使用关键字搜索
+   - 按日期范围筛选
+   - 按状态筛选
+
+4. **导出列表**
+   - 选择导出格式（Excel/HTML/PDF/Markdown）
    - 自动下载导出文件
 
-## ⚡ 常用命令
+5. **下载或删除视频**
+   - 点击下载按钮获取视频
+   - 点击删除按钮删除视频
 
-```bash
-# 安装依赖
-npm install
-
-# 初始化数据库
-npm run init-db
-
-# 启动服务（生产环境）
-npm start
-
-# 启动服务（开发模式）
-npm run dev
-
-# 检查 yt-dlp 版本
-yt-dlp --version
-
-# 测试数据库连接
-psql -U postgres -d youtube_downloader -c "SELECT NOW();"
-```
-
-## 🔧 最小化配置示例
+## ⚙️ 最小配置
 
 `.env` 文件最小配置：
 
@@ -109,83 +112,130 @@ psql -U postgres -d youtube_downloader -c "SELECT NOW();"
 # 数据库（必需）
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=youtube_downloader
+DB_NAME=slideshow_generator
 DB_USER=postgres
 DB_PASSWORD=your_password
 
 # 服务器（可选，默认3000）
 PORT=3000
 
-# 下载配置（可选）
-DOWNLOAD_PATH=./downloads
-CONCURRENT_DOWNLOADS=3
+# 路径（可选，使用默认值）
+UPLOAD_PATH=./uploads
+OUTPUT_PATH=./outputs
+TEMP_PATH=./temp
 ```
 
-通知配置是可选的，不配置也能正常使用下载功能。
+## 🎨 推荐设置
+
+### 最佳视频质量
+- 分辨率：1920x1080 (默认)
+- 帧率：30 FPS (默认)
+- 格式：MP4
+
+### 字体设置建议
+- 字体大小：48-72px
+- 字体颜色：白色（#FFFFFF）
+- 字体背景：透明（或深色半透明）
+- 边距：100-200px
+
+### 动画效果推荐
+- **专业感**：淡入淡出
+- **活泼感**：滑动效果
+- **强调感**：放大效果
 
 ## 🐛 常见问题
 
-### Q: 找不到 yt-dlp？
-A: 运行 `yt-dlp --version` 确认已安装。如果安装在自定义路径，在 `.env` 中设置：
-```env
-YT_DLP_PATH=/your/custom/path/yt-dlp
+### Q: 安装 canvas 模块失败？
+**A:** 需要先安装系统依赖：
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+npm install canvas
+```
+
+**macOS:**
+```bash
+brew install pkg-config cairo pango libpng jpeg giflib librsvg
+npm install canvas
+```
+
+### Q: FFmpeg 找不到？
+**A:** 确保 FFmpeg 已安装并在 PATH 中：
+```bash
+which ffmpeg  # Linux/macOS
+where ffmpeg  # Windows
 ```
 
 ### Q: 数据库连接失败？
-A: 检查以下几点：
-1. PostgreSQL 服务是否运行：`pg_ctl status`
-2. 数据库是否存在：`psql -U postgres -l`
-3. 用户名密码是否正确
+**A:** 检查：
+1. PostgreSQL 是否运行：`sudo systemctl status postgresql`
+2. 数据库是否创建：`psql -U postgres -l`
+3. 密码是否正确
 4. 是否运行了 `npm run init-db`
 
-### Q: 下载失败？
-A: 可能原因：
-1. 视频有地区限制
-2. 视频需要登录
-3. 视频已被删除
-4. 网络问题
+### Q: 生成视频速度慢？
+**A:** 这是正常的，取决于：
+1. 视频时长
+2. 服务器性能
+3. 背景音乐大小
+4. 动画复杂度
 
-查看控制台日志获取详细错误信息。
+通常 5秒视频需要 30-60秒生成时间。
 
-### Q: WebSocket 连接失败？
-A: 刷新页面重试，或检查防火墙设置。
+### Q: 中文字体显示为方框？
+**A:** 上传自定义中文字体文件（.ttf 格式）。
 
-## 📦 生产环境部署建议
+### Q: 视频无声音？
+**A:** 确保：
+1. 背景音乐文件完整
+2. 音频格式正确
+3. 音频文件未损坏
 
-1. **使用进程管理器**
-```bash
-# 安装 PM2
-npm install -g pm2
+## 📚 进阶使用
 
-# 启动应用
-pm2 start server.js --name youtube-downloader
+### 自定义字体
+1. 准备 TTF、OTF 或 WOFF 格式的字体文件
+2. 在表单中上传字体文件
+3. 字体会自动应用到视频中
 
-# 设置开机自启
-pm2 startup
-pm2 save
-```
+### 使用背景图片
+1. 准备 JPG、PNG 等格式的图片
+2. 建议分辨率：1920x1080 或更高
+3. 上传后背景颜色设置自动失效
 
-2. **使用反向代理**
-- 使用 Nginx 作为反向代理
-- 配置 HTTPS
-- 设置域名
+### 调整文本位置
+- 居中显示：上下左右边距相等
+- 底部字幕：增大上边距，减小下边距
+- 左对齐：减小左边距
+- 右对齐：减小右边距
 
-3. **数据库优化**
-- 配置数据库连接池
-- 定期备份数据
-- 优化查询性能
+### 选择合适的时长
+- 短文本：3-5秒
+- 中等文本：5-10秒
+- 长文本：10-30秒
+- 音乐时长自动匹配
 
-4. **监控和日志**
-- 配置日志收集
-- 设置错误告警
-- 监控资源使用
+## 🎯 性能优化建议
+
+1. **图片优化**
+   - 使用合适的分辨率（不要过大）
+   - 压缩图片文件大小
+
+2. **音频优化**
+   - 使用 MP3 或 AAC 格式
+   - 比特率：128-192 kbps 足够
+
+3. **服务器配置**
+   - 确保足够的磁盘空间
+   - 定期清理旧文件
+   - 增加内存提升性能
 
 ## 📞 获取帮助
 
-遇到问题？
-1. 查看完整文档：`README.md`
-2. 检查日志输出
-3. 提交 GitHub Issue
+- 查看完整文档：`README.md`
+- 检查服务器日志
+- 提交 GitHub Issue
 
 ---
 
