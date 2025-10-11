@@ -72,8 +72,19 @@ class VideoGenerator {
       console.log(`🖼️  [${videoId}] 开始生成文本图像...`);
       console.log(`🖼️  [${videoId}] 使用字体: ${video.customFontFamily || video.font_family || 'Arial'}`);
       await this.updateProgress(videoId, 10, '生成文本图像...');
-      const textImagePath = await this.generateTextImage(video);
-      console.log(`✅ [${videoId}] 文本图像生成成功: ${textImagePath}`);
+      
+      // 如果是打字机效果，生成图像序列
+      let textImagePath;
+      let isTypewriterEffect = video.text_animation === 'typewriter';
+      
+      if (isTypewriterEffect) {
+        console.log(`⌨️  [${videoId}] 打字机效果：生成逐字图像序列...`);
+        textImagePath = await this.generateTypewriterSequence(video);
+        console.log(`✅ [${videoId}] 打字机图像序列生成成功`);
+      } else {
+        textImagePath = await this.generateTextImage(video);
+        console.log(`✅ [${videoId}] 文本图像生成成功: ${textImagePath}`);
+      }
 
       // 3. 获取音频时长
       console.log(`🎵 [${videoId}] 开始分析音频: ${video.background_music}`);
@@ -103,7 +114,8 @@ class VideoGenerator {
           const overallProgress = 30 + Math.floor(progress * 0.6);
           console.log(`📊 [${videoId}] FFmpeg进度: ${Math.floor(progress * 100)}%`);
           this.updateProgress(videoId, overallProgress, '正在合成视频...');
-        }
+        },
+        isTypewriterEffect
       );
       console.log(`✅ [${videoId}] 视频合成成功: ${videoPath}`);
 
@@ -614,18 +626,9 @@ class VideoGenerator {
         break;
 
       case 'typewriter':
-        // 打字机效果 - 使用drawtext逐字显示
-        console.log(`  ✅ 打字机效果 (逐字显示)`);
-        // 计算文本长度来设置显示速度
-        const textLength = (video.text_content || '').length;
-        const charsPerSecond = Math.max(5, textLength / animDuration);  // 每秒显示字符数
-        
-        // 使用横向crop模拟打字机效果
-        command.videoFilters([
-          `pad=iw*2:ih:0:0`,  // 扩大画布
-          `crop='iw/2*min(t*${charsPerSecond}/${textLength}\\,1)':ih:0:0`  // 从左到右逐渐显示
-        ].join(','));
-        console.log(`  📊 打字机参数: ${charsPerSecond.toFixed(1)}字符/秒`);
+        // 打字机效果已通过图像序列实现，不需要额外滤镜
+        console.log(`  ✅ 打字机效果 (已通过逐帧图像实现)`);
+        // 图像序列本身就是打字效果，不需要额外的FFmpeg滤镜
         break;
 
       case 'flip_horizontal':
