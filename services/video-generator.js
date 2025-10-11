@@ -471,8 +471,10 @@ class VideoGenerator {
           `-r ${fps}`,
           `-s ${width}x${height}`,
           '-c:a aac',
-          '-b:a 192k',
-          '-shortest'
+          '-b:a 192k'
+          // 移除 -shortest 标志，因为我们已经在输入端设置了精确的时长
+          // 音频: -stream_loop -1 -t ${duration}
+          // 视频: -t ${duration}
         ])
         .output(outputPath);
 
