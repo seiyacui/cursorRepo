@@ -729,10 +729,11 @@ class YouTubeDownloader {
 
   // Helper: Format file size
   formatFileSize(bytes) {
-    if (!bytes) return '0 B';
+    if (!bytes || bytes === 0) return '0 B';
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    const size = Math.round(bytes / Math.pow(1024, i) * 100) / 100;
+    return `${size} ${sizes[i]}`;
   }
 
   // Helper: Format duration
