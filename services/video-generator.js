@@ -357,9 +357,9 @@ class VideoGenerator {
   }
 
   // 创建视频
-  createVideo(video, textImagePath, duration, onProgress) {
+  createVideo(video, textImagePath, duration, onProgress, isTypewriterSequence = false) {
     console.log(`🎬 开始创建视频...`);
-    console.log(`📝 参数: 图像=${textImagePath}, 时长=${duration}秒`);
+    console.log(`📝 参数: 图像=${textImagePath}, 时长=${duration}秒, 图像序列=${isTypewriterSequence}`);
     
     return new Promise((resolve, reject) => {
       const outputFilename = `video_${uuidv4()}.${video.video_format}`;
@@ -370,13 +370,25 @@ class VideoGenerator {
       console.log(`🔧 构建FFmpeg命令...`);
       let command = ffmpeg();
 
-      // 添加文本图像输入（循环）
-      console.log(`➕ 添加图像输入: ${textImagePath}`);
-      command.input(textImagePath)
-        .inputOptions([
-          '-loop 1',
-          `-t ${duration}`
-        ]);
+      // 添加文本图像输入
+      if (isTypewriterSequence) {
+        // 打字机效果：使用图像序列
+        const sequencePattern = path.join(textImagePath, 'frame_%04d.png');
+        console.log(`➕ 添加图像序列: ${sequencePattern}`);
+        const fps = video.video_fps || 30;
+        command.input(sequencePattern)
+          .inputOptions([
+            `-framerate ${fps}`
+          ]);
+      } else {
+        // 普通效果：循环单张图片
+        console.log(`➕ 添加图像输入: ${textImagePath}`);
+        command.input(textImagePath)
+          .inputOptions([
+            '-loop 1',
+            `-t ${duration}`
+          ]);
+      }
 
       // 添加音频输入（支持循环）
       console.log(`➕ 添加音频输入: ${video.background_music}`);
