@@ -366,32 +366,19 @@ ${rows}
       fs.writeFileSync(tempHtmlFile, html, 'utf8');
       console.log('Temporary HTML file created');
       
-      // Launch browser with optimized settings (removed --single-process)
+      // Launch browser with minimal, stable settings
       browser = await puppeteer.launch({
-        headless: 'new', // Use new headless mode
+        headless: true, // Use old headless (most stable)
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-software-rasterizer',
-          '--disable-extensions',
-          '--disable-web-security',
-          '--disable-features=IsolateOrigins,site-per-process',
-          '--no-first-run',
-          '--disable-background-networking',
-          '--disable-default-apps',
-          '--disable-sync',
-          '--disable-translate',
-          '--hide-scrollbars',
-          '--metrics-recording-only',
-          '--mute-audio',
-          '--no-default-browser-check',
-          '--safebrowsing-disable-auto-update'
+          '--disable-dev-shm-usage'
         ],
-        dumpio: false,
-        timeout: 60000,
-        protocolTimeout: 60000
+        timeout: 120000, // 2 minutes for launch
+        protocolTimeout: 120000, // 2 minutes for protocol
+        handleSIGINT: false,
+        handleSIGTERM: false,
+        handleSIGHUP: false
       });
       
       console.log('Browser launched, creating new page...');
