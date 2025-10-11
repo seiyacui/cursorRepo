@@ -365,7 +365,7 @@ class VideoGenerator {
       // 应用文本动画效果
       const animation = video.text_animation || 'fade';
       console.log(`🎨 应用动画效果: ${animation}`);
-      this.applyAnimation(command, animation, duration);
+      this.applyAnimation(command, animation, duration, video);
 
       // 标准错误输出（FFmpeg详细日志）
       command.on('stderr', (stderrLine) => {
