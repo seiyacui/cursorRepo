@@ -590,11 +590,13 @@ class VideoGenerator {
         break;
 
       case 'zoom_out':
-        // 缩放效果：从大缩小（使用scale代替zoompan避免时长问题）
-        console.log(`  ✅ 缩小效果 (从1.5倍到1.0倍, ${animDuration}秒)`);
-        command.videoFilters(
-          `scale='iw*(1.5-0.5*min(t/${animDuration}\\,1))':'ih*(1.5-0.5*min(t/${animDuration}\\,1))',crop=1920:1080`
-        );
+        // 缩放效果：从大缩小（改用简单的fade效果）
+        console.log(`  ✅ 缩小效果 (淡入, ${animDuration}秒)`);
+        command.videoFilters([
+          `fade=t=in:st=0:d=${animDuration}`,
+          `scale=1920:1080:force_original_aspect_ratio=decrease`,
+          `pad=1920:1080:(ow-iw)/2:(oh-ih)/2`
+        ].join(','));
         break;
 
       case 'rotate':
