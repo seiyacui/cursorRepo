@@ -353,22 +353,43 @@ ${rows}
     const filepath = path.join(this.exportDir, filename);
     
     let browser = null;
+    let page = null;
+    
     try {
-      // Launch browser with optimized settings
+      console.log('Launching browser for PNG export...');
+      
+      // Launch browser with maximum stability settings
       browser = await puppeteer.launch({
-        headless: 'new',
+        headless: true, // Use classic headless mode (more stable than 'new')
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
           '--disable-software-rasterizer',
-          '--disable-extensions'
+          '--disable-extensions',
+          '--disable-web-security',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process', // Run in single process mode for stability
+          '--disable-background-networking',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--disable-translate',
+          '--hide-scrollbars',
+          '--metrics-recording-only',
+          '--mute-audio',
+          '--no-default-browser-check',
+          '--safebrowsing-disable-auto-update'
         ],
-        timeout: 30000 // 30 second timeout
+        dumpio: false, // Don't pipe browser process stdout/stderr
+        timeout: 60000, // 60 second timeout for browser launch
+        protocolTimeout: 60000 // 60 second protocol timeout
       });
       
-      const page = await browser.newPage();
+      console.log('Browser launched, creating new page...');
+      page = await browser.newPage();
       
       // Set viewport
       await page.setViewport({ 
@@ -377,26 +398,42 @@ ${rows}
         deviceScaleFactor: 1
       });
       
+      console.log('Setting page content...');
       // Set content with timeout
       await page.setContent(html, { 
-        waitUntil: 'domcontentloaded', // Changed from networkidle0 to domcontentloaded
-        timeout: 15000 // 15 second timeout
+        waitUntil: 'load', // Wait for load event (more reliable than domcontentloaded)
+        timeout: 30000 // 30 second timeout
       });
       
-      // Wait a bit for rendering
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Waiting for rendering...');
+      // Wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
+      console.log('Taking screenshot...');
       // Take screenshot of full page
       await page.screenshot({ 
         path: filepath, 
         fullPage: true,
         type: 'png',
-        timeout: 15000 // 15 second timeout
+        timeout: 30000, // 30 second timeout
+        captureBeyondViewport: true
       });
       
-      // Close browser
-      await browser.close();
-      browser = null;
+      console.log('Screenshot saved, closing browser...');
+      
+      // Close page first
+      if (page) {
+        await page.close();
+        page = null;
+      }
+      
+      // Then close browser
+      if (browser) {
+        await browser.close();
+        browser = null;
+      }
+      
+      console.log('PNG export completed successfully');
       
       return {
         success: true,
@@ -406,14 +443,23 @@ ${rows}
       };
     } catch (error) {
       console.error('PNG generation error:', error);
+      console.error('Error stack:', error.stack);
       
-      // Ensure browser is closed even on error
-      if (browser) {
-        try {
-          await browser.close();
-        } catch (closeError) {
-          console.error('Error closing browser:', closeError);
+      // Ensure resources are closed even on error
+      try {
+        if (page) {
+          await page.close().catch(e => console.error('Error closing page:', e));
         }
+      } catch (e) {
+        console.error('Error in page cleanup:', e);
+      }
+      
+      try {
+        if (browser) {
+          await browser.close().catch(e => console.error('Error closing browser:', e));
+        }
+      } catch (e) {
+        console.error('Error in browser cleanup:', e);
       }
       
       throw new Error('Failed to generate PNG: ' + error.message);
