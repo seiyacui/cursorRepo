@@ -588,12 +588,10 @@ class VideoGenerator {
         break;
 
       case 'zoom_out':
-        // 缩放效果：从大缩小
+        // 缩放效果：从大缩小（使用scale代替zoompan避免时长问题）
         console.log(`  ✅ 缩小效果 (从1.5倍到1.0倍, ${animDuration}秒)`);
-        const framesOut = Math.floor(animDuration * 25); // 使用动画时长
-        const totalFramesOut = Math.floor(duration * 25);
         command.videoFilters(
-          `zoompan=z='1.5-0.5*min(on/${framesOut}\\,1)':d=${totalFramesOut}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=25`
+          `scale='iw*(1.5-0.5*min(t/${animDuration}\\,1))':'ih*(1.5-0.5*min(t/${animDuration}\\,1))',crop=1920:1080`
         );
         break;
 
