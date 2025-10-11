@@ -134,8 +134,16 @@ class ExportService {
     const filename = `video_list_${timestamp}.html`;
     const filepath = path.join(this.exportPath, filename);
 
-    const totalSize = videos.reduce((sum, v) => sum + (v.video_file_size || 0), 0);
-    const totalDuration = videos.reduce((sum, v) => sum + (v.video_duration || 0), 0);
+    // 确保累加时正确处理数字类型
+    const totalSize = videos.reduce((sum, v) => {
+      const size = parseFloat(v.video_file_size);
+      return sum + (isNaN(size) ? 0 : size);
+    }, 0);
+    
+    const totalDuration = videos.reduce((sum, v) => {
+      const duration = parseFloat(v.video_duration);
+      return sum + (isNaN(duration) ? 0 : duration);
+    }, 0);
 
     const tableRows = videos.map((video, index) => `
       <tr>
