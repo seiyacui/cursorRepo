@@ -259,10 +259,16 @@ class VideoGenerator {
       ctx.fillText(line, centerX, startY + index * lineHeight);
     });
 
-    // 6. 保存图像
-    const tempImagePath = path.join(this.tempPath, `text_${uuidv4()}.png`);
+    // 7. 保存图像
+    const tempImagePath = path.join(this.tempPath, `text_image_${uuidv4()}.png`);
     const buffer = canvas.toBuffer('image/png');
     await fs.writeFile(tempImagePath, buffer);
+    
+    if (charCount !== null) {
+      console.log(`💾 打字机帧已保存: ${charCount}/${video.text_content.length}字符`);
+    } else {
+      console.log(`💾 图像已保存: ${tempImagePath}`);
+    }
 
     return tempImagePath;
   }
