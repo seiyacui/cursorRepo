@@ -226,29 +226,35 @@ class VideoGenerator {
     const centerX = marginLeft + textAreaWidth / 2;
     const centerY = marginTop + textAreaHeight / 2;
 
-    // 4. 绘制文本背景（如果设置了）
-    if (video.font_background_color && video.font_background_color !== 'transparent') {
-      const lines = this.wrapText(ctx, video.text_content, textAreaWidth);
-      const lineHeight = fontSize * 1.5;
-      const textBlockHeight = lines.length * lineHeight;
-      const textBlockY = centerY - textBlockHeight / 2;
+    // 4. 准备显示的文本（支持打字机效果）
+    const displayText = charCount !== null 
+      ? video.text_content.substring(0, charCount) 
+      : video.text_content;
+    
+    const lines = this.wrapText(ctx, displayText, textAreaWidth);
+    const lineHeight = fontSize * 1.5;
+    const totalHeight = lines.length * lineHeight;
+    const startY = centerY - totalHeight / 2 + lineHeight / 2;
 
-      ctx.fillStyle = video.font_background_color;
-      ctx.fillRect(
-        marginLeft - 20,
-        textBlockY - 20,
-        textAreaWidth + 40,
-        textBlockHeight + 40
-      );
-
-      ctx.fillStyle = video.font_color || '#FFFFFF';
+    // 5. 绘制文本背景（如果设置了）
+    if (!video.font_background_transparent && video.font_background_color) {
+      lines.forEach((line, i) => {
+        const metrics = ctx.measureText(line);
+        const textWidth = metrics.width;
+        const padding = 10;
+        
+        ctx.fillStyle = video.font_background_color;
+        ctx.fillRect(
+          centerX - textWidth / 2 - padding,
+          startY + i * lineHeight - fontSize / 2 - padding / 2,
+          textWidth + padding * 2,
+          fontSize + padding
+        );
+      });
     }
 
-    // 5. 绘制文本（支持换行）
-    const lines = this.wrapText(ctx, video.text_content, textAreaWidth);
-    const lineHeight = fontSize * 1.5;
-    const startY = centerY - ((lines.length - 1) * lineHeight) / 2;
-
+    // 6. 绘制文本
+    ctx.fillStyle = video.font_color || '#FFFFFF';
     lines.forEach((line, index) => {
       ctx.fillText(line, centerX, startY + index * lineHeight);
     });
