@@ -405,11 +405,16 @@ class VideoGenerator {
   }
 
   // 应用动画效果
-  applyAnimation(command, animation, duration) {
+  applyAnimation(command, animation, duration, video) {
     console.log(`🎬 应用动画效果: ${animation}`);
     
-    // 动画时长（秒）
-    const animDuration = Math.min(1.5, duration * 0.3);
+    // 动画时长（秒） - 使用用户设定的时长，如果没有则使用默认值
+    const userAnimDuration = parseFloat(video?.animation_duration);
+    const animDuration = (!isNaN(userAnimDuration) && userAnimDuration > 0) 
+      ? Math.min(userAnimDuration, duration)  // 不超过视频总时长
+      : Math.min(1.5, duration * 0.3);  // 默认值：最多1.5秒或视频时长的30%
+    
+    console.log(`⏱️  动画时长: ${animDuration}秒 (用户设定: ${video?.animation_duration || '默认'})`);;
     
     switch (animation) {
       case 'fade':

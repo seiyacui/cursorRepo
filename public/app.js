@@ -571,65 +571,70 @@ function updatePreview() {
 
 function applyPreviewAnimation(element, animation) {
   element.style.animation = 'none';
+  
+  // 获取用户设定的动画时长
+  const durationInput = document.getElementById('animationDuration');
+  const duration = durationInput ? parseFloat(durationInput.value) || 1.0 : 1.0;
+  
   setTimeout(() => {
     switch (animation) {
       // 基础动画
       case 'fade':
-        element.style.animation = 'fadeIn 1s ease-in-out';
+        element.style.animation = `fadeIn ${duration}s ease-in-out`;
         break;
       
       // 滑动效果
       case 'slide_left':
-        element.style.animation = 'slideInLeft 1s ease-out';
+        element.style.animation = `slideInLeft ${duration}s ease-out`;
         break;
       case 'slide_right':
-        element.style.animation = 'slideInRight 1s ease-out';
+        element.style.animation = `slideInRight ${duration}s ease-out`;
         break;
       case 'slide_up':
-        element.style.animation = 'slideInUp 1s ease-out';
+        element.style.animation = `slideInUp ${duration}s ease-out`;
         break;
       case 'slide_down':
-        element.style.animation = 'slideInDown 1s ease-out';
+        element.style.animation = `slideInDown ${duration}s ease-out`;
         break;
       case 'slide_diagonal_tl':
-        element.style.animation = 'slideInDiagonalTL 1s ease-out';
+        element.style.animation = `slideInDiagonalTL ${duration}s ease-out`;
         break;
       case 'slide_diagonal_tr':
-        element.style.animation = 'slideInDiagonalTR 1s ease-out';
+        element.style.animation = `slideInDiagonalTR ${duration}s ease-out`;
         break;
       
       // 旋转缩放
       case 'zoom_in':
-        element.style.animation = 'zoomIn 1s ease-out';
+        element.style.animation = `zoomIn ${duration}s ease-out`;
         break;
       case 'zoom_out':
-        element.style.animation = 'zoomOut 1s ease-out';
+        element.style.animation = `zoomOut ${duration}s ease-out`;
         break;
       case 'rotate':
-        element.style.animation = 'rotateIn 1s ease-out';
+        element.style.animation = `rotateIn ${duration}s ease-out`;
         break;
       case 'rotate_reverse':
-        element.style.animation = 'rotateInReverse 1s ease-out';
+        element.style.animation = `rotateInReverse ${duration}s ease-out`;
         break;
       case 'spin':
-        element.style.animation = 'spinIn 1s ease-out';
+        element.style.animation = `spinIn ${duration}s ease-out`;
         break;
       
       // 跳动摆动
       case 'bounce':
-        element.style.animation = 'bounceIn 1s ease-out';
+        element.style.animation = `bounceIn ${duration}s ease-out`;
         break;
       case 'bounce_horizontal':
-        element.style.animation = 'bounceHorizontal 2s ease-in-out infinite';
+        element.style.animation = `bounceHorizontal ${duration * 2}s ease-in-out infinite`;
         break;
       case 'shake':
-        element.style.animation = 'shake 0.5s ease-in-out infinite';
+        element.style.animation = `shake ${duration * 0.5}s ease-in-out infinite`;
         break;
       case 'swing':
-        element.style.animation = 'swing 2s ease-in-out infinite';
+        element.style.animation = `swing ${duration * 2}s ease-in-out infinite`;
         break;
       case 'wave':
-        element.style.animation = 'wave 2s ease-in-out infinite';
+        element.style.animation = `wave ${duration * 2}s ease-in-out infinite`;
         break;
       
       // 特效动画
@@ -651,19 +656,19 @@ function applyPreviewAnimation(element, animation) {
       
       // 创意效果
       case 'flip_horizontal':
-        element.style.animation = 'flipHorizontal 1s ease-out';
+        element.style.animation = `flipHorizontal ${duration}s ease-out`;
         break;
       case 'flip_vertical':
-        element.style.animation = 'flipVertical 1s ease-out';
+        element.style.animation = `flipVertical ${duration}s ease-out`;
         break;
       case 'spiral':
-        element.style.animation = 'spiral 2s ease-out';
+        element.style.animation = `spiral ${duration * 2}s ease-out`;
         break;
       case 'elastic':
-        element.style.animation = 'elastic 1s ease-out';
+        element.style.animation = `elastic ${duration}s ease-out`;
         break;
       case 'rubber':
-        element.style.animation = 'rubber 2s ease-in-out infinite';
+        element.style.animation = `rubber ${duration * 2}s ease-in-out infinite`;
         break;
       
       default:
@@ -1074,7 +1079,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 实时预览更新
   ['textContent', 'backgroundColor', 'fontFamily', 'fontSize', 'fontColor', 
    'fontBackgroundColor', 'marginTop', 'marginBottom', 'marginLeft', 'marginRight',
-   'textAnimation', 'transparentBg'].forEach(id => {
+   'textAnimation', 'animationDuration', 'transparentBg'].forEach(id => {
     const element = document.getElementById(id);
     if (element) {
       element.addEventListener('input', updatePreview);
