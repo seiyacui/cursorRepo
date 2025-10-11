@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS videos (
     -- 幻灯片设置
     slide_duration INTEGER DEFAULT 5,
     text_animation VARCHAR(50) DEFAULT 'fade',
+    animation_duration DECIMAL(3, 1) DEFAULT 1.5,
     
     -- 视频属性
     video_format VARCHAR(10) DEFAULT 'mp4',
