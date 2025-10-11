@@ -414,7 +414,8 @@ class VideoGenerator {
         const fps = video.video_fps || 30;
         command.input(sequencePattern)
           .inputOptions([
-            `-framerate ${fps}`
+            `-framerate ${fps}`,
+            `-t ${duration}`  // 限制图像序列时长
           ]);
       } else {
         // 普通效果：循环单张图片
