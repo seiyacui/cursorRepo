@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>🔄 强制更新</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .container {
+      text-align: center;
+      background: rgba(255,255,255,0.1);
+      padding: 40px;
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    h1 {
+      font-size: 3em;
+      margin: 0 0 20px 0;
+    }
+    p {
+      font-size: 1.2em;
+      margin: 20px 0;
+    }
+    .btn {
+      display: inline-block;
+      padding: 15px 40px;
+      margin: 10px;
+      background: white;
+      color: #667eea;
+      text-decoration: none;
+      border-radius: 50px;
+      font-weight: bold;
+      font-size: 1.1em;
+      transition: transform 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn:hover {
+      transform: scale(1.05);
+    }
+    .countdown {
+      font-size: 2em;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+    .status {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 紧急更新</h1>
+    <p>检测到浏览器缓存问题</p>
+    <div class="status" id="status">正在清除缓存...</div>
+    <div class="countdown" id="countdown">3</div>
+    <button class="btn" onclick="manualUpdate()">立即更新</button>
+  </div>
+
+  <script>
+    let count = 3;
+    
+    function clearEverything() {
+      // 清除所有存储
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // 清除所有cookies
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
+      
+      // 尝试清除缓存
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) caches.delete(name);
+        });
+      }
+      
+      document.getElementById('status').innerHTML = '✅ 缓存已清除！';
+    }
+    
+    function manualUpdate() {
+      clearEverything();
+      document.getElementById('status').innerHTML = '🔄 正在重新加载...';
+      setTimeout(() => {
+        window.location.href = '/?_t=' + Date.now();
+      }, 500);
+    }
+    
+    // 自动倒计时
+    const timer = setInterval(() => {
+      count--;
+      document.getElementById('countdown').textContent = count;
+      
+      if (count <= 0) {
+        clearInterval(timer);
+        clearEverything();
+        document.getElementById('countdown').textContent = '🚀';
+        document.getElementById('status').innerHTML = '🔄 正在跳转到主页...';
+        setTimeout(() => {
+          window.location.href = '/?_t=' + Date.now();
+        }, 1000);
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

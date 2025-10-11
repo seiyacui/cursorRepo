@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>调试工具</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      margin: 10px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .danger {
+      background: #f44336;
+    }
+    .danger:hover {
+      background: #da190b;
+    }
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .status {
+      padding: 5px 10px;
+      border-radius: 3px;
+      display: inline-block;
+      margin: 5px;
+    }
+    .status.ok {
+      background: #4CAF50;
+      color: white;
+    }
+    .status.error {
+      background: #f44336;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔧 调试工具</h1>
+
+  <div class="card">
+    <h2>1. 版本检查</h2>
+    <div id="versionInfo"></div>
+    <button onclick="checkVersion()">🔍 检查版本</button>
+    <button onclick="clearCache()" class="danger">🗑️ 清除缓存并刷新</button>
+  </div>
+
+  <div class="card">
+    <h2>2. 计时器状态</h2>
+    <div id="timerInfo"></div>
+    <button onclick="checkTimers()">🔍 检查计时器</button>
+    <button onclick="stopAllTimers()" class="danger">🛑 强制停止所有计时器</button>
+  </div>
+
+  <div class="card">
+    <h2>3. 视频状态检查</h2>
+    <input type="number" id="videoId" placeholder="输入视频ID" value="11" style="padding: 8px; margin-right: 10px;">
+    <button onclick="checkVideo()">🔍 检查视频</button>
+    <button onclick="refreshList()">🔄 刷新列表</button>
+    <div id="videoInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. 生成报告测试</h2>
+    <button onclick="testReport()">🧪 测试显示报告</button>
+    <div id="reportInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>5. WebSocket 状态</h2>
+    <div id="wsInfo"></div>
+    <button onclick="checkWebSocket()">🔍 检查连接</button>
+  </div>
+
+  <div class="card">
+    <h2>📋 控制台日志</h2>
+    <pre id="consoleLog">等待日志...</pre>
+    <button onclick="clearLog()">清除日志</button>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let logContent = [];
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'error' ? '#f44336' : type === 'success' ? '#4CAF50' : '#2196F3';
+      logContent.push(`<span style="color: ${color}">[${timestamp}] ${message}</span>`);
+      document.getElementById('consoleLog').innerHTML = logContent.slice(-20).join('\n');
+    }
+
+    function clearLog() {
+      logContent = [];
+      document.getElementById('consoleLog').innerHTML = '等待日志...';
+    }
+
+    function checkVersion() {
+      const stored = localStorage.getItem('app_version');
+      const expected = '1.0.2';
+      const match = stored === expected;
+      
+      document.getElementById('versionInfo').innerHTML = `
+        <p>存储的版本: <span class="status ${match ? 'ok' : 'error'}">${stored || '未设置'}</span></p>
+        <p>期望的版本: <span class="status ok">${expected}</span></p>
+        <p>状态: <span class="status ${match ? 'ok' : 'error'}">${match ? '✅ 版本正确' : '❌ 需要更新'}</span></p>
+      `;
+      
+      log(`版本检查: ${stored || '未设置'} (期望: ${expected})`, match ? 'success' : 'error');
+    }
+
+    function clearCache() {
+      localStorage.clear();
+      sessionStorage.clear();
+      log('缓存已清除，即将刷新页面...', 'success');
+      setTimeout(() => {
+        window.location.reload(true);
+      }, 1000);
+    }
+
+    function checkTimers() {
+      // 尝试访问主页面的计时器变量
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = '/';
+      document.body.appendChild(iframe);
+      
+      setTimeout(() => {
+        try {
+          const win = iframe.contentWindow;
+          const hasGenerationTimer = typeof win.generationTimer !== 'undefined';
+          const hasPollingInterval = typeof win.progressPollingInterval !== 'undefined';
+          
+          document.getElementById('timerInfo').innerHTML = `
+            <p>generationTimer: <span class="status ${hasGenerationTimer ? 'error' : 'ok'}">${hasGenerationTimer ? '❌ 存在' : '✅ 不存在'}</span></p>
+            <p>progressPollingInterval: <span class="status ${hasPollingInterval ? 'error' : 'ok'}">${hasPollingInterval ? '❌ 存在' : '✅ 不存在'}</span></p>
+          `;
+          
+          log(`计时器检查完成`, 'info');
+        } catch (e) {
+          document.getElementById('timerInfo').innerHTML = `<p>⚠️ 无法访问主页面的计时器状态</p>`;
+          log(`计时器检查失败: ${e.message}`, 'error');
+        }
+        
+        document.body.removeChild(iframe);
+      }, 1000);
+    }
+
+    function stopAllTimers() {
+      // 尝试在主窗口执行
+      if (window.opener) {
+        try {
+          if (window.opener.generationTimer) {
+            clearInterval(window.opener.generationTimer);
+            window.opener.generationTimer = null;
+          }
+          if (window.opener.progressPollingInterval) {
+            clearInterval(window.opener.progressPollingInterval);
+            window.opener.progressPollingInterval = null;
+          }
+          log('✅ 已停止所有计时器', 'success');
+        } catch (e) {
+          log(`❌ 无法停止计时器: ${e.message}`, 'error');
+        }
+      } else {
+        log('⚠️ 请从主页面的新窗口打开此页面', 'error');
+      }
+    }
+
+    async function checkVideo() {
+      const videoId = document.getElementById('videoId').value;
+      if (!videoId) {
+        log('请输入视频ID', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/videos/${videoId}`);
+        const data = await response.json();
+
+        if (data.success) {
+          const v = data.data;
+          document.getElementById('videoInfo').innerHTML = `
+            <pre>${JSON.stringify(v, null, 2)}</pre>
+            <p>状态: <span class="status ${v.generation_status === 'completed' ? 'ok' : 'error'}">${v.generation_status}</span></p>
+            <p>进度: ${v.generation_progress}%</p>
+            <p>时长: ${v.video_duration}秒</p>
+            <p>文件名: ${v.video_filename || '无'}</p>
+          `;
+          log(`✅ 视频${videoId}状态: ${v.generation_status}`, 'success');
+        } else {
+          log(`❌ 获取视频${videoId}失败`, 'error');
+        }
+      } catch (error) {
+        log(`❌ 请求失败: ${error.message}`, 'error');
+      }
+    }
+
+    async function refreshList() {
+      try {
+        const response = await fetch(`${API_BASE}/api/videos`);
+        const data = await response.json();
+        log(`✅ 列表已刷新，共${data.data.videos.length}个视频`, 'success');
+      } catch (error) {
+        log(`❌ 刷新失败: ${error.message}`, 'error');
+      }
+    }
+
+    async function testReport() {
+      const videoId = document.getElementById('videoId').value;
+      if (!videoId) {
+        log('请输入视频ID', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/videos/${videoId}`);
+        const data = await response.json();
+
+        if (data.success && data.data.generation_status === 'completed') {
+          const v = data.data;
+          document.getElementById('reportInfo').innerHTML = `
+            <h3>✅ 生成报告</h3>
+            <p>📊 视频时长: ${v.video_duration}秒</p>
+            <p>📦 文件大小: ${(v.video_file_size / 1024 / 1024).toFixed(2)} MB</p>
+            <p>🎬 视频格式: ${v.video_format.toUpperCase()}</p>
+            <p>📁 文件名: ${v.video_filename}</p>
+            <a href="/outputs/${v.video_filename}" download="${v.video_filename}" style="display: inline-block; padding: 10px 20px; background: #4CAF50; color: white; text-decoration: none; border-radius: 4px; margin-top: 10px;">⬇️ 下载视频</a>
+          `;
+          log(`✅ 报告显示成功`, 'success');
+        } else {
+          document.getElementById('reportInfo').innerHTML = `<p>⚠️ 视频还未完成生成</p>`;
+          log(`⚠️ 视频${videoId}状态: ${data.data.generation_status}`, 'error');
+        }
+      } catch (error) {
+        log(`❌ 测试失败: ${error.message}`, 'error');
+      }
+    }
+
+    function checkWebSocket() {
+      const ws = new WebSocket(`ws://${window.location.host}`);
+      
+      ws.onopen = () => {
+        document.getElementById('wsInfo').innerHTML = `<p class="status ok">✅ WebSocket 连接成功</p>`;
+        log('✅ WebSocket连接成功', 'success');
+        ws.close();
+      };
+
+      ws.onerror = (error) => {
+        document.getElementById('wsInfo').innerHTML = `<p class="status error">❌ WebSocket 连接失败</p>`;
+        log('❌ WebSocket连接失败', 'error');
+      };
+    }
+
+    // 自动运行版本检查
+    checkVersion();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1151 @@
+// Slideshow Video Generator - Frontend Application
+// Version: 1.0.4 (2025-10-10 - Fault Tolerant Fix)
+
+// ==================== Configuration ====================
+const API_BASE = window.location.origin;
+const WS_URL = `ws://${window.location.host}`;
+const APP_VERSION = '1.0.4';
+
+// ==================== State ====================
+let ws = null;
+let currentPage = 1;
+let pageSize = 50;
+let currentFilters = {};
+let currentVideoId = null;
+let generationTimer = null;
+let generationStartTime = null;
+
+// 强制版本检查和缓存清除
+const storedVersion = localStorage.getItem('app_version');
+if (storedVersion !== APP_VERSION) {
+  console.log(`%c🔄 检测到版本更新: ${storedVersion || '旧版本'} -> ${APP_VERSION}`, 'color: #4CAF50; font-size: 16px; font-weight: bold;');
+  console.log('%c⚠️  正在清除旧缓存...', 'color: #FF9800; font-size: 14px;');
+  
+  // 清除所有存储
+  localStorage.clear();
+  sessionStorage.clear();
+  localStorage.setItem('app_version', APP_VERSION);
+  
+  // 清除所有旧的状态
+  if (typeof generationTimer !== 'undefined' && generationTimer) clearInterval(generationTimer);
+  if (typeof progressPollingInterval !== 'undefined' && progressPollingInterval) clearInterval(progressPollingInterval);
+  
+  console.log('%c✅ 缓存已清除，应用版本已更新！', 'color: #4CAF50; font-size: 14px; font-weight: bold;');
+  console.log('%c🔄 建议: 请刷新页面以确保所有更新生效', 'color: #FF9800; font-size: 14px; font-weight: bold;');
+}
+
+console.log(`%c📱 应用版本: ${APP_VERSION}`, 'color: #2196F3; font-size: 14px; font-weight: bold;');
+console.log(`%c🔧 调试模式: 已启用`, 'color: #9C27B0; font-size: 12px;');
+
+// 紧急检查：如果检测到轮询异常，自动跳转到强制更新页面
+setTimeout(() => {
+  if (typeof progressPollingInterval !== 'undefined' && progressPollingInterval !== null) {
+    const runningTime = Date.now() - (generationStartTime || Date.now());
+    if (runningTime > 300000) { // 超过5分钟
+      console.error('%c⚠️  检测到计时器异常！正在跳转到强制更新页面...', 'color: #f44336; font-size: 16px; font-weight: bold;');
+      setTimeout(() => {
+        window.location.href = '/force-update.html';
+      }, 2000);
+    }
+  }
+}, 60000); // 1分钟后检查
+
+// ==================== WebSocket Connection ====================
+function connectWebSocket() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    console.log('✅ WebSocket连接成功');
+    updateWSStatus(true);
+    showToast('WebSocket连接成功', 'success');
+  };
+
+  ws.onclose = () => {
+    console.log('❌ WebSocket连接断开');
+    updateWSStatus(false);
+    showToast('WebSocket连接断开，尝试重连...', 'error');
+    setTimeout(connectWebSocket, 5000);
+  };
+
+  ws.onerror = (error) => {
+    console.error('WebSocket错误:', error);
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      handleWebSocketMessage(message);
+    } catch (error) {
+      console.error('解析WebSocket消息失败:', error);
+    }
+  };
+}
+
+function updateWSStatus(connected) {
+  const statusEl = document.getElementById('wsStatus');
+  if (connected) {
+    statusEl.textContent = '✅ 已连接';
+    statusEl.style.color = '#28a745';
+  } else {
+    statusEl.textContent = '❌ 断开';
+    statusEl.style.color = '#dc3545';
+  }
+}
+
+function handleWebSocketMessage(message) {
+  console.log('📨 收到消息:', message);
+
+  switch (message.type) {
+    case 'generation_progress':
+      updateGenerationProgress(message.videoId, message.data);
+      break;
+    case 'notification':
+      showToast(message.data.message || '通知', 'info');
+      break;
+    case 'error':
+      showToast(`错误: ${message.data.message}`, 'error');
+      break;
+  }
+}
+
+// ==================== UI Updates ====================
+function updateGenerationProgress(videoId, data) {
+  if (videoId !== currentVideoId) return;
+
+  const progressSection = document.getElementById('progressSection');
+  const progressText = document.getElementById('progressText');
+  const progressPercent = document.getElementById('progressPercent');
+  const progressBar = document.getElementById('progressBar');
+
+  progressSection.style.display = 'block';
+
+  if (data.status === 'generating') {
+    progressText.textContent = data.message || '正在生成...';
+    progressPercent.textContent = `${data.progress || 0}%`;
+    progressBar.style.width = `${data.progress || 0}%`;
+  } else if (data.status === 'completed') {
+    clearInterval(generationTimer);
+    progressText.textContent = '生成完成！';
+    progressPercent.textContent = '100%';
+    progressBar.style.width = '100%';
+
+    setTimeout(() => {
+      loadVideoDetails(videoId);
+    }, 1000);
+  } else if (data.status === 'failed') {
+    clearInterval(generationTimer);
+    progressText.textContent = '生成失败：' + (data.error || '未知错误');
+    progressBar.style.backgroundColor = '#dc3545';
+    showToast('视频生成失败', 'error');
+  }
+}
+
+async function loadVideoDetails(videoId) {
+  try {
+    const response = await fetch(`${API_BASE}/api/videos/${videoId}`);
+    const data = await response.json();
+
+    if (data.success && data.data.generation_status === 'completed') {
+      showGenerationReport(data.data);
+    }
+  } catch (error) {
+    console.error('加载视频详情失败:', error);
+  }
+}
+
+function showGenerationReport(video) {
+  // 立即停止所有计时器和轮询
+  if (generationTimer) {
+    clearInterval(generationTimer);
+    generationTimer = null;
+  }
+  if (progressPollingInterval) {
+    clearInterval(progressPollingInterval);
+    progressPollingInterval = null;
+  }
+
+  const progressSection = document.getElementById('progressSection');
+  const reportSection = document.getElementById('reportSection');
+
+  progressSection.style.display = 'none';
+  reportSection.style.display = 'block';
+
+  // 计算总耗时
+  const totalTime = generationStartTime ? Math.floor((Date.now() - generationStartTime) / 1000) : 0;
+  
+  // 显示详细的生成报告
+  document.getElementById('reportDuration').textContent = formatDuration(video.video_duration);
+  document.getElementById('reportSize').textContent = formatFileSize(video.video_file_size);
+  document.getElementById('reportFormat').textContent = (video.video_format || 'mp4').toUpperCase();
+
+  // 设置下载链接
+  const downloadLink = document.getElementById('downloadLink');
+  if (video.video_filename) {
+    downloadLink.href = `/outputs/${video.video_filename}`;
+    downloadLink.download = video.video_filename;
+    downloadLink.style.display = 'inline-flex';
+  } else {
+    downloadLink.style.display = 'none';
+  }
+
+  console.log('✅ 生成报告显示完成:', {
+    duration: video.video_duration,
+    size: video.video_file_size,
+    filename: video.video_filename,
+    totalTime: `${totalTime}秒`
+  });
+
+  showToast(`视频生成完成！耗时${totalTime}秒`, 'success');
+  loadStats();
+}
+
+// ==================== API Calls ====================
+async function apiRequest(url, options = {}) {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+        ...options.headers
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || '请求失败');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('API请求失败:', error);
+    throw error;
+  }
+}
+
+async function loadStats() {
+  try {
+    const data = await apiRequest(`${API_BASE}/api/stats`);
+
+    if (data.success) {
+      const stats = data.data;
+      document.getElementById('totalVideos').textContent = stats.total || 0;
+      document.getElementById('completedVideos').textContent = stats.completed || 0;
+      document.getElementById('generatingVideos').textContent = stats.generating || 0;
+    }
+  } catch (error) {
+    console.error('加载统计失败:', error);
+  }
+}
+
+async function loadVideos(filters = {}) {
+  try {
+    const params = new URLSearchParams({
+      limit: pageSize,
+      offset: (currentPage - 1) * (pageSize === 'ALL' ? 0 : pageSize),
+      ...filters
+    });
+
+    const data = await apiRequest(`${API_BASE}/api/videos?${params}`);
+
+    if (data.success) {
+      renderVideoTable(data.data.videos);
+      updatePagination(data.data.total);
+    }
+  } catch (error) {
+    console.error('加载视频列表失败:', error);
+    showToast('加载视频列表失败', 'error');
+  }
+}
+
+function renderVideoTable(videos) {
+  const tbody = document.getElementById('videoTableBody');
+
+  if (videos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="no-data">暂无数据</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = videos.map(v => `
+    <tr>
+      <td>${v.id}</td>
+      <td title="${v.text_content}">${truncate(v.text_content, 50)}</td>
+      <td>${v.video_filename || 'N/A'}</td>
+      <td>${v.video_format ? v.video_format.toUpperCase() : 'N/A'}</td>
+      <td>${formatDuration(v.video_duration)}</td>
+      <td>${formatFileSize(v.video_file_size)}</td>
+      <td>${formatDate(v.created_at)}</td>
+      <td><span class="status-badge status-${v.generation_status}">${getStatusText(v.generation_status)}</span></td>
+      <td>
+        ${v.generation_status === 'completed' ? 
+          `<a href="/outputs/${v.video_filename}" download class="btn btn-success" style="padding: 6px 12px; font-size: 12px;">下载</a>` : 
+          ''}
+        <button class="btn btn-danger" onclick="deleteVideo(${v.id})">删除</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function updatePagination(total) {
+  if (pageSize === 'ALL') {
+    document.getElementById('pageInfo').textContent = `共 ${total} 条`;
+    document.getElementById('btnPrevPage').disabled = true;
+    document.getElementById('btnNextPage').disabled = true;
+    return;
+  }
+
+  const totalPages = Math.ceil(total / pageSize);
+  document.getElementById('pageInfo').textContent = `第 ${currentPage} / ${totalPages} 页 (共 ${total} 条)`;
+
+  document.getElementById('btnPrevPage').disabled = currentPage === 1;
+  document.getElementById('btnNextPage').disabled = currentPage >= totalPages;
+}
+
+async function deleteVideo(id) {
+  if (!confirm('确定要删除这个视频吗？这将同时删除视频文件。')) {
+    return;
+  }
+
+  try {
+    await apiRequest(`${API_BASE}/api/videos/${id}`, { method: 'DELETE' });
+    showToast('视频已删除', 'success');
+    loadVideos(currentFilters);
+    loadStats();
+  } catch (error) {
+    showToast('删除失败: ' + error.message, 'error');
+  }
+}
+
+async function submitVideoForm(e) {
+  e.preventDefault();
+
+  // 确保 WebSocket 已连接
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    console.warn('⚠️  WebSocket 未连接，尝试重新连接...');
+    connectWebSocket();
+    await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒连接
+  }
+
+  const form = document.getElementById('videoForm');
+  const formData = new FormData(form);
+
+  // 处理透明背景
+  if (document.getElementById('transparentBg').checked) {
+    formData.set('font_background_color', 'transparent');
+  }
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner"></span> 正在上传...';
+
+  try {
+    // 1. 创建视频记录
+    const createData = await apiRequest(`${API_BASE}/api/videos/create`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (createData.success) {
+      currentVideoId = createData.data.id;
+      showToast('视频记录创建成功，开始生成...', 'success');
+
+      // 2. 开始生成视频
+      const generateData = await apiRequest(`${API_BASE}/api/videos/${currentVideoId}/generate`, {
+        method: 'POST'
+      });
+
+      if (generateData.success) {
+        // 显示进度区域
+        document.getElementById('progressSection').style.display = 'block';
+        document.getElementById('reportSection').style.display = 'none';
+
+        // 启动计时器
+        generationStartTime = Date.now();
+        generationTimer = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - generationStartTime) / 1000);
+          document.getElementById('elapsedTime').textContent = `${elapsed}秒`;
+        }, 1000);
+
+        // 启动轮询（作为WebSocket的备份）
+        startProgressPolling(currentVideoId);
+
+        showToast('视频生成任务已启动', 'success');
+      }
+    }
+  } catch (error) {
+    showToast('提交失败: ' + error.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '🚀 生成视频';
+  }
+}
+
+// 轮询进度（WebSocket备份方案）
+let progressPollingInterval = null;
+function startProgressPolling(videoId) {
+  console.log(`🔄 启动进度轮询（videoId: ${videoId}）`);
+  
+  // 清除旧的轮询
+  if (progressPollingInterval) {
+    clearInterval(progressPollingInterval);
+    progressPollingInterval = null;
+  }
+
+  let pollCount = 0;
+
+  // 定义轮询函数
+  const pollProgress = async () => {
+    pollCount++;
+    try {
+      const response = await fetch(`${API_BASE}/api/videos/${videoId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        const video = data.data;
+        console.log(`📊 轮询进度: ${video.generation_progress}%, 状态: ${video.generation_status}`);
+
+        // 更新进度显示
+        const progressText = document.getElementById('progressText');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressBar = document.getElementById('progressBar');
+
+        // 根据状态显示不同的文本
+        if (video.generation_status === 'generating') {
+          progressText.textContent = '正在生成视频...';
+        } else if (video.generation_status === 'completed') {
+          progressText.textContent = '生成完成！';
+        }
+        
+        progressPercent.textContent = `${video.generation_progress}%`;
+        progressBar.style.width = `${video.generation_progress}%`;
+
+        // 容错判断：多种方式检查是否完成
+        const isCompleted = video.generation_status === 'completed' || 
+                           String(video.generation_status).trim() === 'completed' ||
+                           video.generation_progress >= 100;
+        
+        // 详细日志（每5次轮询显示一次）
+        if (pollCount % 5 === 0) {
+          console.log(`[容错检查] 状态="${video.generation_status}", 进度=${video.generation_progress}%, 判定完成=${isCompleted}`);
+        }
+
+        // 如果完成或失败，停止轮询
+        if (isCompleted) {
+          console.log('%c✅ 视频生成完成！停止所有计时器...', 'color: #4CAF50; font-size: 14px; font-weight: bold;');
+          
+          // 立即停止所有计时器
+          console.log('🛑 清除轮询计时器...', progressPollingInterval ? 'ID=' + progressPollingInterval : '无');
+          if (progressPollingInterval) {
+            clearInterval(progressPollingInterval);
+            progressPollingInterval = null;
+          }
+          
+          console.log('🛑 清除生成计时器...', generationTimer ? 'ID=' + generationTimer : '无');
+          if (generationTimer) {
+            clearInterval(generationTimer);
+            generationTimer = null;
+          }
+          
+          console.log('📊 停止计时器后的状态:', {
+            progressPollingInterval,
+            generationTimer,
+            currentVideoId
+          });
+          
+          // 立即显示生成报告
+          console.log('📝 准备显示生成报告...');
+          showGenerationReport(video);
+          
+          // 刷新统计和列表
+          setTimeout(() => {
+            console.log('🔄 刷新统计和列表...');
+            loadStats();
+            // 如果在列表TAB，刷新列表
+            const listTab = document.getElementById('tab-list');
+            if (listTab && listTab.classList.contains('active')) {
+              console.log('📋 刷新视频列表（当前在列表TAB）');
+              loadVideos(currentFilters);
+            }
+          }, 1000);
+          
+        } else if (video.generation_status === 'failed') {
+          console.log('❌ 检测到失败状态，停止轮询');
+          
+          // 停止所有计时器
+          if (progressPollingInterval) {
+            clearInterval(progressPollingInterval);
+            progressPollingInterval = null;
+          }
+          if (generationTimer) {
+            clearInterval(generationTimer);
+            generationTimer = null;
+          }
+          
+          progressText.textContent = '生成失败：' + (video.error_message || '未知错误');
+          progressBar.style.backgroundColor = '#dc3545';
+          showToast('视频生成失败', 'error');
+          loadStats();
+        }
+      }
+    } catch (error) {
+      console.error('轮询进度失败:', error);
+    }
+  };
+
+  // 立即执行一次
+  pollProgress();
+  
+  // 然后每2秒轮询一次
+  progressPollingInterval = setInterval(pollProgress, 2000);
+}
+
+async function exportVideos(format) {
+  const exportStatus = document.getElementById('exportStatus');
+  exportStatus.textContent = '正在导出...';
+  exportStatus.className = 'export-status';
+
+  try {
+    const data = await apiRequest(`${API_BASE}/api/videos/export`, {
+      method: 'POST',
+      body: JSON.stringify({
+        format,
+        filters: currentFilters
+      })
+    });
+
+    if (data.success) {
+      exportStatus.textContent = `导出成功！`;
+      exportStatus.className = 'export-status success';
+
+      // 自动下载
+      const link = document.createElement('a');
+      link.href = data.data.downloadUrl;
+      link.download = data.data.filename;
+      link.click();
+
+      setTimeout(() => {
+        exportStatus.textContent = '';
+      }, 3000);
+    }
+  } catch (error) {
+    exportStatus.textContent = `导出失败: ${error.message}`;
+    exportStatus.className = 'export-status error';
+  }
+}
+
+// ==================== Preview Functions ====================
+function updatePreview() {
+  const previewCanvas = document.getElementById('previewCanvas');
+  const textContent = document.getElementById('textContent').value || '预览文本';
+  const backgroundColor = document.getElementById('backgroundImage').files.length > 0 ? 
+    '#888' : document.getElementById('backgroundColor').value;
+  let fontFamily = document.getElementById('fontFamily').value;
+  const fontSize = document.getElementById('fontSize').value + 'px';
+  const fontColor = document.getElementById('fontColor').value;
+  const fontBackgroundColor = document.getElementById('transparentBg').checked ? 
+    'transparent' : document.getElementById('fontBackgroundColor').value;
+
+  const marginTop = document.getElementById('marginTop').value + 'px';
+  const marginBottom = document.getElementById('marginBottom').value + 'px';
+  const marginLeft = document.getElementById('marginLeft').value + 'px';
+  const marginRight = document.getElementById('marginRight').value + 'px';
+
+  // 如果选择了自定义字体，使用已加载的字体
+  if (fontFamily === 'custom' && window.customPreviewFont) {
+    fontFamily = window.customPreviewFont;
+    console.log(`🎨 预览使用自定义字体: ${fontFamily}`);
+  }
+
+  previewCanvas.style.backgroundColor = backgroundColor;
+  previewCanvas.style.fontFamily = fontFamily;
+  previewCanvas.style.fontSize = fontSize;
+  previewCanvas.style.color = fontColor;
+  previewCanvas.style.backgroundColor = fontBackgroundColor === 'transparent' ? backgroundColor : fontBackgroundColor;
+  previewCanvas.style.padding = `${marginTop} ${marginRight} ${marginBottom} ${marginLeft}`;
+  previewCanvas.textContent = textContent;
+
+  // 应用动画效果
+  const animation = document.getElementById('textAnimation').value;
+  applyPreviewAnimation(previewCanvas, animation);
+}
+
+function applyPreviewAnimation(element, animation) {
+  element.style.animation = 'none';
+  
+  // 获取用户设定的动画时长
+  const durationInput = document.getElementById('animationDuration');
+  const duration = durationInput ? parseFloat(durationInput.value) || 1.0 : 1.0;
+  
+  setTimeout(() => {
+    switch (animation) {
+      // 基础动画
+      case 'fade':
+        element.style.animation = `fadeIn ${duration}s ease-in-out`;
+        break;
+      
+      // 滑动效果
+      case 'slide_left':
+        element.style.animation = `slideInLeft ${duration}s ease-out`;
+        break;
+      case 'slide_right':
+        element.style.animation = `slideInRight ${duration}s ease-out`;
+        break;
+      case 'slide_up':
+        element.style.animation = `slideInUp ${duration}s ease-out`;
+        break;
+      case 'slide_down':
+        element.style.animation = `slideInDown ${duration}s ease-out`;
+        break;
+      case 'slide_diagonal_tl':
+        element.style.animation = `slideInDiagonalTL ${duration}s ease-out`;
+        break;
+      case 'slide_diagonal_tr':
+        element.style.animation = `slideInDiagonalTR ${duration}s ease-out`;
+        break;
+      
+      // 旋转缩放
+      case 'zoom_in':
+        element.style.animation = `zoomIn ${duration}s ease-out`;
+        break;
+      case 'zoom_out':
+        element.style.animation = `zoomOut ${duration}s ease-out`;
+        break;
+      case 'rotate':
+        element.style.animation = `rotateIn ${duration}s ease-out`;
+        break;
+      case 'rotate_reverse':
+        element.style.animation = `rotateInReverse ${duration}s ease-out`;
+        break;
+      case 'spin':
+        element.style.animation = `spinIn ${duration}s ease-out`;
+        break;
+      
+      // 跳动摆动
+      case 'bounce':
+        element.style.animation = `bounceIn ${duration}s ease-out`;
+        break;
+      case 'bounce_horizontal':
+        element.style.animation = `bounceHorizontal ${duration * 2}s ease-in-out infinite`;
+        break;
+      case 'shake':
+        element.style.animation = `shake ${duration * 0.5}s ease-in-out infinite`;
+        break;
+      case 'swing':
+        element.style.animation = `swing ${duration * 2}s ease-in-out infinite`;
+        break;
+      case 'wave':
+        element.style.animation = `wave ${duration * 2}s ease-in-out infinite`;
+        break;
+      
+      // 特效动画
+      case 'blink':
+        element.style.animation = 'blink 0.5s ease-in-out infinite';
+        break;
+      case 'pulse':
+        element.style.animation = 'pulse 1s ease-in-out infinite';
+        break;
+      case 'blur_in':
+        element.style.animation = 'blurIn 1s ease-out';
+        break;
+      case 'glow':
+        element.style.animation = 'glow 1s ease-in-out';
+        break;
+      case 'typewriter':
+        element.style.animation = 'typewriter 2s steps(40) forwards';
+        break;
+      
+      // 创意效果
+      case 'flip_horizontal':
+        element.style.animation = `flipHorizontal ${duration}s ease-out`;
+        break;
+      case 'flip_vertical':
+        element.style.animation = `flipVertical ${duration}s ease-out`;
+        break;
+      case 'spiral':
+        element.style.animation = `spiral ${duration * 2}s ease-out`;
+        break;
+      case 'elastic':
+        element.style.animation = `elastic ${duration}s ease-out`;
+        break;
+      case 'rubber':
+        element.style.animation = `rubber ${duration * 2}s ease-in-out infinite`;
+        break;
+      
+      default:
+        element.style.animation = 'none';
+    }
+  }, 10);
+}
+
+// Add animation keyframes
+const style = document.createElement('style');
+style.textContent = `
+  /* 基础动画 */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  /* 滑动效果 */
+  @keyframes slideInLeft {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes slideInUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes slideInDown {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes slideInDiagonalTL {
+    from { transform: translate(100%, 100%); }
+    to { transform: translate(0, 0); }
+  }
+  @keyframes slideInDiagonalTR {
+    from { transform: translate(-100%, 100%); }
+    to { transform: translate(0, 0); }
+  }
+  
+  /* 旋转缩放 */
+  @keyframes zoomIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes zoomOut {
+    from { transform: scale(2); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes rotateIn {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes rotateInReverse {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+  }
+  @keyframes spinIn {
+    from { transform: rotate(0deg) scale(0.5); opacity: 0; }
+    to { transform: rotate(1080deg) scale(1); opacity: 1; }
+  }
+  
+  /* 跳动摆动 */
+  @keyframes bounceIn {
+    0%, 100% { transform: translateY(0); }
+    25%, 75% { transform: translateY(-30px); }
+    50% { transform: translateY(0); }
+  }
+  @keyframes bounceHorizontal {
+    0%, 100% { transform: translateX(0); }
+    25%, 75% { transform: translateX(-20px); }
+    50% { transform: translateX(20px); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px) rotate(-2deg); }
+    75% { transform: translateX(10px) rotate(2deg); }
+  }
+  @keyframes swing {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(15deg); }
+    75% { transform: rotate(-15deg); }
+  }
+  @keyframes wave {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+  
+  /* 特效动画 */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+  @keyframes blurIn {
+    from { filter: blur(10px); opacity: 0; }
+    to { filter: blur(0); opacity: 1; }
+  }
+  @keyframes glow {
+    from { filter: brightness(1); text-shadow: none; }
+    to { filter: brightness(1.5); text-shadow: 0 0 20px currentColor; }
+  }
+  @keyframes typewriter {
+    from { 
+      width: 0;
+      opacity: 1;
+    }
+    to { 
+      width: 100%;
+      opacity: 1;
+    }
+  }
+  
+  /* 创意效果 */
+  @keyframes flipHorizontal {
+    from { transform: scaleX(-1); opacity: 0; }
+    to { transform: scaleX(1); opacity: 1; }
+  }
+  @keyframes flipVertical {
+    from { transform: scaleY(-1); opacity: 0; }
+    to { transform: scaleY(1); opacity: 1; }
+  }
+  @keyframes spiral {
+    from { transform: rotate(0deg) scale(0.1); opacity: 0; }
+    to { transform: rotate(720deg) scale(1); opacity: 1; }
+  }
+  @keyframes elastic {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    70% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+  }
+  @keyframes rubber {
+    0%, 100% { transform: scaleX(1) scaleY(1); }
+    25% { transform: scaleX(1.2) scaleY(0.8); }
+    75% { transform: scaleX(0.8) scaleY(1.2); }
+  }
+`;
+document.head.appendChild(style);
+
+// ==================== File Management ====================
+// 清除文件选择
+function clearFile(inputId) {
+  const input = document.getElementById(inputId);
+  const fileNameId = inputId === 'backgroundMusic' ? 'musicFileName' :
+                     inputId === 'backgroundImage' ? 'imageFileName' :
+                     inputId === 'customFont' ? 'fontFileName' : null;
+  const btnId = inputId === 'backgroundMusic' ? 'btnClearMusic' :
+                inputId === 'backgroundImage' ? 'btnClearImage' :
+                inputId === 'customFont' ? 'btnClearFont' : null;
+  
+  if (input) {
+    input.value = '';
+    if (fileNameId) {
+      document.getElementById(fileNameId).textContent = '未选择文件';
+    }
+    if (btnId) {
+      document.getElementById(btnId).style.display = 'none';
+    }
+    
+    // 如果是字体文件，从列表中移除
+    if (inputId === 'customFont') {
+      removeCustomFontFromList();
+    }
+    
+    console.log(`🗑️ 已清除文件: ${inputId}`);
+  }
+}
+
+// 添加自定义字体到列表
+function addCustomFontToList(fontFileName) {
+  const fontSelect = document.getElementById('fontFamily');
+  const fileInput = document.getElementById('customFont');
+  
+  // 移除旧的自定义字体选项
+  removeCustomFontFromList();
+  
+  // 添加新的自定义字体选项
+  const option = document.createElement('option');
+  option.value = 'custom';
+  option.textContent = `自定义字体 (${fontFileName})`;
+  option.setAttribute('data-custom', 'true');
+  option.selected = true;  // 自动选中
+  fontSelect.appendChild(option);
+  
+  // 为预览加载自定义字体
+  if (fileInput.files[0]) {
+    loadCustomFontForPreview(fileInput.files[0], fontFileName);
+  }
+  
+  console.log(`✅ 已添加自定义字体到列表: ${fontFileName}`);
+  showToast(`自定义字体已添加: ${fontFileName}`, 'success');
+}
+
+// 为预览加载自定义字体
+function loadCustomFontForPreview(fontFile, fontFileName) {
+  // 使用 FileReader 读取字体文件
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    const fontData = e.target.result;
+    const fontName = 'CustomFont_' + Date.now();
+    
+    // 创建 @font-face 规则
+    const fontFace = new FontFace(fontName, fontData);
+    
+    fontFace.load().then(function(loadedFace) {
+      // 添加到文档
+      document.fonts.add(loadedFace);
+      
+      // 保存字体名称供预览使用
+      window.customPreviewFont = fontName;
+      
+      console.log(`✅ 预览字体已加载: ${fontName}`);
+      showToast(`预览字体已加载: ${fontFileName}`, 'success');
+      
+      // 更新预览
+      updatePreview();
+    }).catch(function(error) {
+      console.error('❌ 加载预览字体失败:', error);
+      showToast(`字体加载失败: ${error.message}`, 'error');
+    });
+  };
+  
+  reader.readAsArrayBuffer(fontFile);
+}
+
+// 从列表中移除自定义字体
+function removeCustomFontFromList() {
+  const fontSelect = document.getElementById('fontFamily');
+  const customOptions = fontSelect.querySelectorAll('[data-custom="true"]');
+  customOptions.forEach(option => option.remove());
+  
+  // 选中默认字体
+  if (fontSelect.options.length > 0) {
+    fontSelect.selectedIndex = 0;
+  }
+}
+
+// ==================== Utility Functions ====================
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B';
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '0:00';
+  // 确保处理小数秒数
+  const totalSeconds = Math.floor(parseFloat(seconds));
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function formatDate(date) {
+  if (!date) return 'N/A';
+  const d = new Date(date);
+  return d.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function truncate(text, length) {
+  if (!text) return 'N/A';
+  return text.length > length ? text.substring(0, length) + '...' : text;
+}
+
+function getStatusText(status) {
+  const statusMap = {
+    'pending': '待生成',
+    'generating': '生成中',
+    'completed': '已完成',
+    'failed': '失败'
+  };
+  return statusMap[status] || status;
+}
+
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = `toast ${type} show`;
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}
+
+// 检查是否有正在生成的视频
+async function checkOngoingGeneration() {
+  try {
+    const response = await fetch(`${API_BASE}/api/videos?status=generating&limit=1`);
+    const data = await response.json();
+    
+    if (data.success && data.data.videos.length > 0) {
+      const video = data.data.videos[0];
+      console.log(`🔄 发现正在生成的视频: ID=${video.id}, 进度=${video.generation_progress}%`);
+      
+      // 恢复生成界面
+      currentVideoId = video.id;
+      document.getElementById('progressSection').style.display = 'block';
+      document.getElementById('reportSection').style.display = 'none';
+      
+      // 启动计时器
+      generationStartTime = Date.now() - ((video.generation_progress || 0) * 100); // 粗略估算
+      generationTimer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - generationStartTime) / 1000);
+        document.getElementById('elapsedTime').textContent = `${elapsed}秒`;
+      }, 1000);
+      
+      // 启动轮询
+      startProgressPolling(video.id);
+      
+      showToast('恢复视频生成进度监控', 'info');
+    }
+  } catch (error) {
+    console.error('检查正在生成的视频失败:', error);
+  }
+}
+
+// ==================== Event Listeners ====================
+document.addEventListener('DOMContentLoaded', () => {
+  // 连接 WebSocket
+  connectWebSocket();
+
+  // 加载初始数据
+  loadStats();
+  
+  // 检查是否有正在生成的视频
+  checkOngoingGeneration();
+
+  // Tab切换
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.getAttribute('data-tab');
+
+      // 更新按钮状态
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // 更新内容显示
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+
+      // 如果切换到列表页，加载数据
+      if (tabName === 'list') {
+        loadVideos();
+      }
+    });
+  });
+
+  // 文件选择显示和删除按钮
+  document.getElementById('backgroundMusic').addEventListener('change', (e) => {
+    const fileName = e.target.files[0]?.name || '未选择文件';
+    document.getElementById('musicFileName').textContent = fileName;
+    const deleteBtn = document.getElementById('btnClearMusic');
+    if (deleteBtn) {
+      deleteBtn.style.display = e.target.files[0] ? 'block' : 'none';
+    }
+  });
+
+  document.getElementById('backgroundImage').addEventListener('change', (e) => {
+    const fileName = e.target.files[0]?.name || '未选择文件';
+    document.getElementById('imageFileName').textContent = fileName;
+    const deleteBtn = document.getElementById('btnClearImage');
+    if (deleteBtn) {
+      deleteBtn.style.display = e.target.files[0] ? 'block' : 'none';
+    }
+  });
+
+  document.getElementById('customFont').addEventListener('change', (e) => {
+    const fileName = e.target.files[0]?.name || '未选择文件';
+    document.getElementById('fontFileName').textContent = fileName;
+    const deleteBtn = document.getElementById('btnClearFont');
+    if (deleteBtn) {
+      deleteBtn.style.display = e.target.files[0] ? 'block' : 'none';
+    }
+    
+    // 自动添加到字体列表
+    if (e.target.files[0]) {
+      addCustomFontToList(fileName);
+    }
+  });
+
+  // 透明背景复选框
+  document.getElementById('transparentBg').addEventListener('change', (e) => {
+    document.getElementById('fontBackgroundColor').disabled = e.target.checked;
+  });
+
+  // 表单提交
+  document.getElementById('videoForm').addEventListener('submit', submitVideoForm);
+
+  // 预览按钮
+  document.getElementById('btnPreview').addEventListener('click', updatePreview);
+
+  // 实时预览更新
+  ['textContent', 'backgroundColor', 'fontFamily', 'fontSize', 'fontColor', 
+   'fontBackgroundColor', 'marginTop', 'marginBottom', 'marginLeft', 'marginRight',
+   'textAnimation', 'animationDuration', 'transparentBg'].forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.addEventListener('input', updatePreview);
+      element.addEventListener('change', updatePreview);
+    }
+  });
+
+  // 初始预览
+  updatePreview();
+
+  // 搜索按钮
+  document.getElementById('btnSearch').addEventListener('click', () => {
+    currentFilters = {
+      keyword: document.getElementById('searchKeyword').value,
+      start_date: document.getElementById('searchStartDate').value,
+      end_date: document.getElementById('searchEndDate').value,
+      status: document.getElementById('searchStatus').value
+    };
+    currentPage = 1;
+    loadVideos(currentFilters);
+  });
+
+  // 重置按钮
+  document.getElementById('btnReset').addEventListener('click', () => {
+    document.getElementById('searchKeyword').value = '';
+    document.getElementById('searchStartDate').value = '';
+    document.getElementById('searchEndDate').value = '';
+    document.getElementById('searchStatus').value = '';
+    currentFilters = {};
+    currentPage = 1;
+    loadVideos();
+  });
+
+  // 导出按钮
+  document.querySelectorAll('.btn-export').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const format = btn.getAttribute('data-format');
+      exportVideos(format);
+    });
+  });
+
+  // 分页
+  document.getElementById('btnPrevPage').addEventListener('click', () => {
+    if (currentPage > 1) {
+      currentPage--;
+      loadVideos(currentFilters);
+    }
+  });
+
+  document.getElementById('btnNextPage').addEventListener('click', () => {
+    currentPage++;
+    loadVideos(currentFilters);
+  });
+
+  document.getElementById('pageSize').addEventListener('change', (e) => {
+    pageSize = e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value);
+    currentPage = 1;
+    loadVideos(currentFilters);
+  });
+
+  // 定期刷新统计
+  setInterval(loadStats, 10000); // 每10秒刷新一次
+});

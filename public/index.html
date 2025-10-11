@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>幻灯片视频生成器</title>
+  <link rel="stylesheet" href="style.css?v=1.0.3">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <h1>🎬 幻灯片视频生成器</h1>
+      <div class="stats-bar">
+        <div class="stat-item">
+          <span class="label">总视频:</span>
+          <span class="value" id="totalVideos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">已完成:</span>
+          <span class="value" id="completedVideos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">生成中:</span>
+          <span class="value" id="generatingVideos">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="label">WebSocket:</span>
+          <span class="value" id="wsStatus">❌ 断开</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+      
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="generate">🎬 生成视频</button>
+        <button class="tab-btn" data-tab="list">📋 视频列表</button>
+      </div>
+
+      <!-- Tab 1: Generate Video -->
+      <div class="tab-content active" id="tab-generate">
+        
+        <!-- Generator Form -->
+        <section class="card">
+          <h2>📝 视频设置</h2>
+          
+          <form id="videoForm" enctype="multipart/form-data">
+            <!-- Text Content -->
+            <div class="form-group">
+              <label for="textContent">显示文本内容 <span class="required">*</span></label>
+              <textarea id="textContent" name="text_content" rows="5" required placeholder="输入要显示的文本内容..."></textarea>
+            </div>
+
+            <!-- Upload Controls -->
+            <div class="form-row">
+              <div class="form-group">
+                <label for="backgroundMusic">背景音乐 <span class="required">*</span></label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="file" id="backgroundMusic" name="background_music" accept="audio/*" required style="flex: 1;">
+                  <button type="button" class="btn btn-danger" id="btnClearMusic" onclick="clearFile('backgroundMusic')" style="display: none; padding: 8px 15px;">🗑️ 删除</button>
+                </div>
+                <span class="file-name" id="musicFileName">未选择文件</span>
+              </div>
+
+              <div class="form-group">
+                <label for="backgroundImage">背景图片（可选）</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="file" id="backgroundImage" name="background_image" accept="image/*" style="flex: 1;">
+                  <button type="button" class="btn btn-danger" id="btnClearImage" onclick="clearFile('backgroundImage')" style="display: none; padding: 8px 15px;">🗑️ 删除</button>
+                </div>
+                <span class="file-name" id="imageFileName">未选择文件</span>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="backgroundColor">背景颜色（无图片时）</label>
+                <input type="color" id="backgroundColor" name="background_color" value="#000000">
+              </div>
+
+              <div class="form-group">
+                <label for="customFont">自定义字体（可选）</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="file" id="customFont" name="custom_font" accept=".ttf,.otf,.woff,.woff2" style="flex: 1;">
+                  <button type="button" class="btn btn-danger" id="btnClearFont" onclick="clearFile('customFont')" style="display: none; padding: 8px 15px;">🗑️ 删除</button>
+                </div>
+                <span class="file-name" id="fontFileName">未选择文件</span>
+                <small style="color: #666; font-size: 0.9em; margin-top: 4px; display: block;">
+                  💡 上传后会自动添加到字体类型列表中
+                </small>
+              </div>
+            </div>
+
+            <!-- Font Settings -->
+            <div class="form-section">
+              <h3>🔤 字体设置</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="fontFamily">字体类型</label>
+                  <select id="fontFamily" name="font_family">
+                    <option value="Arial">Arial</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="SimSun">宋体</option>
+                    <option value="SimHei">黑体</option>
+                    <option value="Microsoft YaHei">微软雅黑</option>
+                    <option value="KaiTi">楷体</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="fontSize">字体大小 (px)</label>
+                  <input type="number" id="fontSize" name="font_size" value="48" min="12" max="200">
+                </div>
+
+                <div class="form-group">
+                  <label for="fontColor">字体颜色</label>
+                  <input type="color" id="fontColor" name="font_color" value="#FFFFFF">
+                </div>
+
+                <div class="form-group">
+                  <label for="fontBackgroundColor">字体背景色</label>
+                  <input type="color" id="fontBackgroundColor" name="font_background_color" value="#000000">
+                  <label>
+                    <input type="checkbox" id="transparentBg" checked> 透明
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Text Position -->
+            <div class="form-section">
+              <h3>📐 文本位置（边距，单位：像素）</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="marginTop">上边距</label>
+                  <input type="number" id="marginTop" name="text_margin_top" value="100" min="0" max="1000">
+                </div>
+
+                <div class="form-group">
+                  <label for="marginBottom">下边距</label>
+                  <input type="number" id="marginBottom" name="text_margin_bottom" value="100" min="0" max="1000">
+                </div>
+
+                <div class="form-group">
+                  <label for="marginLeft">左边距</label>
+                  <input type="number" id="marginLeft" name="text_margin_left" value="100" min="0" max="1000">
+                </div>
+
+                <div class="form-group">
+                  <label for="marginRight">右边距</label>
+                  <input type="number" id="marginRight" name="text_margin_right" value="100" min="0" max="1000">
+                </div>
+              </div>
+            </div>
+
+            <!-- Animation Settings -->
+            <div class="form-row">
+              <div class="form-group">
+                <label for="slideDuration">幻灯片时长（秒）</label>
+                <input type="number" id="slideDuration" name="slide_duration" value="5" min="1" max="300">
+              </div>
+
+              <div class="form-group">
+                <label for="textAnimation">文本动画效果</label>
+                <select id="textAnimation" name="text_animation">
+                  <optgroup label="🎯 基础动画">
+                    <option value="none">无动画</option>
+                    <option value="fade" selected>淡入淡出</option>
+                  </optgroup>
+                  
+                  <optgroup label="➡️ 滑动效果">
+                    <option value="slide_left">从右向左滑入</option>
+                    <option value="slide_right">从左向右滑入</option>
+                    <option value="slide_up">从下向上滑入</option>
+                    <option value="slide_down">从上向下滑入</option>
+                    <option value="slide_diagonal_tl">从右下到左上</option>
+                    <option value="slide_diagonal_tr">从左下到右上</option>
+                  </optgroup>
+                  
+                  <optgroup label="🔄 旋转缩放">
+                    <option value="zoom_in">缩放（从小到大）</option>
+                    <option value="zoom_out">缩放（从大到小）</option>
+                    <option value="rotate">旋转（顺时针360度）</option>
+                    <option value="rotate_reverse">旋转（逆时针360度）</option>
+                    <option value="spin">快速旋转（3圈）</option>
+                  </optgroup>
+                  
+                  <optgroup label="🎾 跳动摆动">
+                    <option value="bounce">弹跳（上下跳动）</option>
+                    <option value="bounce_horizontal">弹跳（左右跳动）</option>
+                    <option value="shake">抖动（震动效果）</option>
+                    <option value="swing">摆动（钟摆效果）</option>
+                    <option value="wave">波浪（上下波动）</option>
+                  </optgroup>
+                  
+                  <optgroup label="✨ 特效动画">
+                    <option value="blink">闪烁（快速闪动）</option>
+                    <option value="pulse">脉冲（心跳效果）</option>
+                    <option value="blur_in">模糊到清晰</option>
+                    <option value="glow">光晕（发光效果）</option>
+                    <option value="typewriter">打字机（逐字显示）</option>
+                  </optgroup>
+                  
+                  <optgroup label="🎨 创意效果">
+                    <option value="flip_horizontal">水平翻转</option>
+                    <option value="flip_vertical">垂直翻转</option>
+                    <option value="spiral">螺旋进入</option>
+                    <option value="elastic">弹性（弹簧效果）</option>
+                    <option value="rubber">橡皮筋（拉伸）</option>
+                  </optgroup>
+                </select>
+                <small style="color: #666; font-size: 0.9em; margin-top: 4px; display: block;">
+                  💡 共25种动画效果！点击"实时预览"查看效果
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="animationDuration">动画效果时长（秒）</label>
+                <input type="number" id="animationDuration" name="animation_duration" value="1.0" min="0.5" max="5.0" step="0.1">
+                <small style="color: #666; font-size: 0.9em; margin-top: 4px; display: block;">
+                  💡 基础0.5秒，以0.1秒增量调整（0.5-5.0秒）
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="videoResolution">视频清晰度</label>
+                <select id="videoResolution" name="video_resolution">
+                  <option value="1080p" selected>1080P (1920x1080)</option>
+                  <option value="2k">2K (2560x1440)</option>
+                  <option value="3k">3K (3200x1800)</option>
+                  <option value="4k">4K (3840x2160)</option>
+                </select>
+                <small style="color: #666; font-size: 0.9em; margin-top: 4px; display: block;">
+                  💡 提示: 高清晰度会增加渲染时间和文件大小
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="videoFormat">视频格式</label>
+                <select id="videoFormat" name="video_format">
+                  <option value="mp4">MP4</option>
+                  <option value="mkv">MKV</option>
+                  <option value="avi">AVI</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="form-actions">
+              <button type="button" id="btnPreview" class="btn btn-secondary">
+                👁️ 实时预览
+              </button>
+              <button type="submit" class="btn btn-primary">
+                🚀 生成视频
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Preview Section -->
+        <section class="card preview-card" id="previewSection">
+          <h2>👁️ 实时预览</h2>
+          <div class="preview-container">
+            <div id="previewCanvas"></div>
+          </div>
+        </section>
+
+        <!-- Progress Section -->
+        <section class="card progress-section" id="progressSection" style="display: none;">
+          <h2>📊 生成进度</h2>
+          
+          <div class="progress-info">
+            <span id="progressText">准备生成...</span>
+            <span id="progressPercent">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+          </div>
+
+          <div class="elapsed-time">
+            <strong>累计耗时：</strong>
+            <span id="elapsedTime">0秒</span>
+          </div>
+        </section>
+
+        <!-- Report Section -->
+        <section class="card report-section" id="reportSection" style="display: none;">
+          <h2>✅ 生成报告</h2>
+          
+          <div class="report-summary">
+            <div class="report-stat">
+              <div class="report-label">视频时长</div>
+              <div class="report-value" id="reportDuration">0:00</div>
+            </div>
+            <div class="report-stat">
+              <div class="report-label">文件大小</div>
+              <div class="report-value" id="reportSize">0 MB</div>
+            </div>
+            <div class="report-stat">
+              <div class="report-label">视频格式</div>
+              <div class="report-value" id="reportFormat">MP4</div>
+            </div>
+          </div>
+
+          <div class="report-download">
+            <a id="downloadLink" class="btn btn-success" download>
+              ⬇️ 下载视频
+            </a>
+          </div>
+
+          <button class="btn btn-primary" onclick="location.reload()">
+            🔄 生成新视频
+          </button>
+        </section>
+
+      </div>
+
+      <!-- Tab 2: Video List -->
+      <div class="tab-content" id="tab-list">
+        
+        <!-- Search and Filter Section -->
+        <section class="card search-section">
+          <h2>🔍 搜索和筛选</h2>
+          
+          <div class="search-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="searchKeyword">关键字：</label>
+                <input type="text" id="searchKeyword" placeholder="搜索文本内容">
+              </div>
+
+              <div class="form-group">
+                <label for="searchStartDate">开始日期：</label>
+                <input type="date" id="searchStartDate">
+              </div>
+
+              <div class="form-group">
+                <label for="searchEndDate">结束日期：</label>
+                <input type="date" id="searchEndDate">
+              </div>
+
+              <div class="form-group">
+                <label for="searchStatus">状态：</label>
+                <select id="searchStatus">
+                  <option value="">全部</option>
+                  <option value="completed">已完成</option>
+                  <option value="generating">生成中</option>
+                  <option value="failed">失败</option>
+                  <option value="pending">待生成</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button id="btnSearch" class="btn btn-primary">🔍 搜索</button>
+              <button id="btnReset" class="btn btn-secondary">🔄 重置</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Export Section -->
+        <section class="card export-section">
+          <h2>📤 导出列表</h2>
+          
+          <div class="export-buttons">
+            <button class="btn btn-export" data-format="excel">
+              📊 导出Excel
+            </button>
+            <button class="btn btn-export" data-format="html">
+              📄 导出HTML
+            </button>
+            <button class="btn btn-export" data-format="pdf">
+              📕 导出PDF
+            </button>
+            <button class="btn btn-export" data-format="markdown">
+              📝 导出Markdown
+            </button>
+          </div>
+
+          <div id="exportStatus" class="export-status"></div>
+        </section>
+
+        <!-- Video List Section -->
+        <section class="card video-list-section">
+          <h2>📋 视频列表</h2>
+          
+          <div class="table-container">
+            <table class="video-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>文本内容</th>
+                  <th>视频文件名</th>
+                  <th>格式</th>
+                  <th>时长</th>
+                  <th>大小</th>
+                  <th>创建日期</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="videoTableBody">
+                <tr>
+                  <td colspan="9" class="no-data">暂无数据，请先生成视频</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <button id="btnPrevPage" class="btn btn-secondary" disabled>上一页</button>
+            <span id="pageInfo">第 1 页</span>
+            <select id="pageSize" class="page-size-select">
+              <option value="10">10条/页</option>
+              <option value="20">20条/页</option>
+              <option value="30">30条/页</option>
+              <option value="50" selected>50条/页</option>
+              <option value="100">100条/页</option>
+              <option value="ALL">全部</option>
+            </select>
+            <button id="btnNextPage" class="btn btn-secondary" disabled>下一页</button>
+          </div>
+        </section>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js?v=1.0.4"></script>
+</body>
+</html>

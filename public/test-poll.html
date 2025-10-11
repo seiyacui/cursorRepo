@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>轮询测试页面</title>
+</head>
+<body>
+  <h1>轮询测试</h1>
+  <div id="status"></div>
+  <div id="progress"></div>
+  <div id="duration"></div>
+  
+  <script>
+    const videoId = 5; // 替换为实际的视频ID
+    
+    function formatDuration(seconds) {
+      if (!seconds || seconds <= 0) return '0:00';
+      const totalSeconds = Math.floor(parseFloat(seconds));
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      
+      if (h > 0) {
+        return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      }
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+    
+    async function checkVideo() {
+      try {
+        const response = await fetch(`/api/videos/${videoId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          const video = data.data;
+          console.log('视频数据:', video);
+          
+          document.getElementById('status').innerHTML = `
+            <strong>状态:</strong> ${video.generation_status}<br>
+            <strong>进度:</strong> ${video.generation_progress}%<br>
+            <strong>视频时长(原始值):</strong> ${video.video_duration}<br>
+            <strong>视频时长(格式化):</strong> ${formatDuration(video.video_duration)}<br>
+            <strong>文件名:</strong> ${video.video_filename || 'N/A'}<br>
+            <strong>文件大小:</strong> ${video.video_file_size || 0} bytes
+          `;
+        }
+      } catch (error) {
+        console.error('检查失败:', error);
+      }
+    }
+    
+    // 立即检查一次
+    checkVideo();
+    
+    // 每2秒检查一次
+    setInterval(checkVideo, 2000);
+  </script>
+</body>
+</html>
