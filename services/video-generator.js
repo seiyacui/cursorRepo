@@ -169,8 +169,8 @@ class VideoGenerator {
     }
   }
 
-  // 生成文本图像
-  async generateTextImage(video) {
+  // 生成文本图像（支持打字机效果的部分字符显示）
+  async generateTextImage(video, charCount = null) {
     console.log(`🖼️  开始生成文本图像...`);
     const width = video.video_width || 1920;
     const height = video.video_height || 1080;
