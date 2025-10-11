@@ -614,12 +614,18 @@ class VideoGenerator {
         break;
 
       case 'typewriter':
-        // 打字机效果（用wipe模拟）
-        console.log(`  ✅ 打字机效果`);
+        // 打字机效果 - 使用drawtext逐字显示
+        console.log(`  ✅ 打字机效果 (逐字显示)`);
+        // 计算文本长度来设置显示速度
+        const textLength = (video.text_content || '').length;
+        const charsPerSecond = Math.max(5, textLength / animDuration);  // 每秒显示字符数
+        
+        // 使用横向crop模拟打字机效果
         command.videoFilters([
-          `pad=iw*2:ih:0:0`,
-          `crop=iw/2:ih:'iw*min(t/${animDuration}\\,1)':0`
+          `pad=iw*2:ih:0:0`,  // 扩大画布
+          `crop='iw/2*min(t*${charsPerSecond}/${textLength}\\,1)':ih:0:0`  // 从左到右逐渐显示
         ].join(','));
+        console.log(`  📊 打字机参数: ${charsPerSecond.toFixed(1)}字符/秒`);
         break;
 
       case 'flip_horizontal':

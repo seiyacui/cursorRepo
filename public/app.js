@@ -778,8 +778,14 @@ style.textContent = `
     to { filter: brightness(1.5); text-shadow: 0 0 20px currentColor; }
   }
   @keyframes typewriter {
-    from { width: 0; }
-    to { width: 100%; }
+    from { 
+      width: 0;
+      opacity: 1;
+    }
+    to { 
+      width: 100%;
+      opacity: 1;
+    }
   }
   
   /* 创意效果 */
