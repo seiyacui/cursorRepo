@@ -267,6 +267,47 @@ class VideoGenerator {
     return tempImagePath;
   }
 
+  // 生成打字机效果的图像序列
+  async generateTypewriterSequence(video) {
+    const textContent = video.text_content || '';
+    const textLength = textContent.length;
+    const fps = video.video_fps || 30;
+    const animDuration = parseFloat(video.animation_duration) || 2.0;
+    
+    // 计算需要的帧数
+    const totalFrames = Math.ceil(animDuration * fps);
+    const charsPerFrame = textLength / totalFrames;
+    
+    console.log(`⌨️  打字机序列: ${textLength}字符, ${totalFrames}帧, ${charsPerFrame.toFixed(2)}字符/帧`);
+    
+    // 创建序列目录
+    const sequenceDir = path.join(this.tempPath, `typewriter_${video.id}_${Date.now()}`);
+    await fs.mkdir(sequenceDir, { recursive: true });
+    
+    // 生成每一帧
+    for (let i = 0; i <= totalFrames; i++) {
+      const charsToShow = Math.min(Math.ceil(i * charsPerFrame), textLength);
+      
+      // 生成该帧的图像（只显示前N个字符）
+      const frameImage = await this.generateTextImage(video, charsToShow);
+      
+      // 复制到序列目录
+      const frameName = `frame_${String(i).padStart(4, '0')}.png`;
+      const framePath = path.join(sequenceDir, frameName);
+      await fs.copyFile(frameImage, framePath);
+      
+      // 删除临时文件
+      await fs.unlink(frameImage);
+      
+      if (i % 10 === 0 || i === totalFrames) {
+        console.log(`⌨️  已生成打字帧: ${i}/${totalFrames} (显示${charsToShow}/${textLength}字符)`);
+      }
+    }
+    
+    console.log(`✅ 打字机图像序列生成完成: ${sequenceDir}`);
+    return sequenceDir;  // 返回目录路径
+  }
+
   // 文本换行处理
   wrapText(ctx, text, maxWidth) {
     const words = text.split('');
