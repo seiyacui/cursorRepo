@@ -348,9 +348,13 @@ ${rows}
   // Export to PNG (screenshot of HTML)
   async exportPNG(videos) {
     const puppeteer = require('puppeteer');
+    const fs = require('fs');
     const html = this.generateHTML(videos);
     const filename = `youtube_videos_${Date.now()}.png`;
     const filepath = path.join(this.exportDir, filename);
+    
+    // Create a temporary HTML file
+    const tempHtmlFile = path.join(this.exportDir, `temp_${Date.now()}.html`);
     
     let browser = null;
     let page = null;
@@ -358,9 +362,13 @@ ${rows}
     try {
       console.log('Launching browser for PNG export...');
       
-      // Launch browser with maximum stability settings
+      // Write HTML to temporary file
+      fs.writeFileSync(tempHtmlFile, html, 'utf8');
+      console.log('Temporary HTML file created');
+      
+      // Launch browser with optimized settings (removed --single-process)
       browser = await puppeteer.launch({
-        headless: true, // Use classic headless mode (more stable than 'new')
+        headless: 'new', // Use new headless mode
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -371,8 +379,6 @@ ${rows}
           '--disable-web-security',
           '--disable-features=IsolateOrigins,site-per-process',
           '--no-first-run',
-          '--no-zygote',
-          '--single-process', // Run in single process mode for stability
           '--disable-background-networking',
           '--disable-default-apps',
           '--disable-sync',
@@ -383,9 +389,9 @@ ${rows}
           '--no-default-browser-check',
           '--safebrowsing-disable-auto-update'
         ],
-        dumpio: false, // Don't pipe browser process stdout/stderr
-        timeout: 60000, // 60 second timeout for browser launch
-        protocolTimeout: 60000 // 60 second protocol timeout
+        dumpio: false,
+        timeout: 60000,
+        protocolTimeout: 60000
       });
       
       console.log('Browser launched, creating new page...');
@@ -398,11 +404,11 @@ ${rows}
         deviceScaleFactor: 1
       });
       
-      console.log('Setting page content...');
-      // Set content with timeout
-      await page.setContent(html, { 
-        waitUntil: 'load', // Wait for load event (more reliable than domcontentloaded)
-        timeout: 30000 // 30 second timeout
+      console.log('Loading HTML file...');
+      // Navigate to the file instead of using setContent
+      await page.goto(`file://${tempHtmlFile}`, {
+        waitUntil: 'networkidle0',
+        timeout: 30000
       });
       
       console.log('Waiting for rendering...');
@@ -415,7 +421,7 @@ ${rows}
         path: filepath, 
         fullPage: true,
         type: 'png',
-        timeout: 30000, // 30 second timeout
+        timeout: 30000,
         captureBeyondViewport: true
       });
       
@@ -434,6 +440,16 @@ ${rows}
       }
       
       console.log('PNG export completed successfully');
+      
+      // Clean up temporary HTML file
+      try {
+        if (fs.existsSync(tempHtmlFile)) {
+          fs.unlinkSync(tempHtmlFile);
+          console.log('Temporary HTML file removed');
+        }
+      } catch (cleanupError) {
+        console.error('Error removing temp file:', cleanupError);
+      }
       
       return {
         success: true,
@@ -460,6 +476,16 @@ ${rows}
         }
       } catch (e) {
         console.error('Error in browser cleanup:', e);
+      }
+      
+      // Clean up temporary HTML file
+      try {
+        if (fs.existsSync(tempHtmlFile)) {
+          fs.unlinkSync(tempHtmlFile);
+          console.log('Temporary HTML file removed');
+        }
+      } catch (cleanupError) {
+        console.error('Error removing temp file:', cleanupError);
       }
       
       throw new Error('Failed to generate PNG: ' + error.message);

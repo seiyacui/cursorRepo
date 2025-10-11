@@ -2,6 +2,28 @@
 
 所有重要的更改都将记录在此文件中。
 
+## [v1.2.3] - 2024-10-10
+
+### 🐛 Bug修复 (紧急)
+- **修复 PNG 导出 "Frame Detached" 错误**
+  - 问题：Navigating frame was detached
+  - 原因：
+    - `--single-process` 参数导致 frame 分离
+    - `page.setContent()` 在某些情况下不稳定
+  - 修复：
+    - ❌ 移除 `--single-process` 参数（导致问题）
+    - ✅ 改用文件系统方法加载 HTML
+    - ✅ 使用 `page.goto('file://...')` 代替 `page.setContent()`
+    - ✅ 改用 `headless: 'new'`（避免警告）
+    - ✅ 添加临时文件自动清理
+    - ✅ 改回 `waitUntil: 'networkidle0'`
+  - 结果：更稳定的页面加载机制
+
+### 📝 修改的文件
+- `services/exporter.js` - exportPNG() 重构（使用文件系统方法）
+
+---
+
 ## [v1.2.2] - 2024-10-10
 
 ### 🐛 Bug修复 (紧急)
