@@ -21,10 +21,15 @@ class ExportService {
 
   // 格式化文件大小
   formatFileSize(bytes) {
-    if (!bytes) return '0 B';
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+    // 确保输入是有效数字
+    const numBytes = parseFloat(bytes);
+    if (!numBytes || isNaN(numBytes) || numBytes <= 0) return '0 B';
+    
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.min(Math.floor(Math.log(numBytes) / Math.log(1024)), sizes.length - 1);
+    const value = numBytes / Math.pow(1024, i);
+    
+    return `${Math.round(value * 100) / 100} ${sizes[i]}`;
   }
 
   // 格式化时长
