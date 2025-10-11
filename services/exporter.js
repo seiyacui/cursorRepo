@@ -213,11 +213,11 @@ class ExporterService {
         <div class="label">下载成功</div>
       </div>
       <div class="summary-item">
-        <div class="value">${this.formatFileSize(videos.reduce((sum, v) => sum + (v.video_size || 0), 0))}</div>
+        <div class="value">${this.formatFileSize(videos.reduce((sum, v) => sum + (Number(v.video_size) || 0), 0))}</div>
         <div class="label">视频总大小</div>
       </div>
       <div class="summary-item">
-        <div class="value">${this.formatFileSize(videos.reduce((sum, v) => sum + (v.audio_size || 0), 0))}</div>
+        <div class="value">${this.formatFileSize(videos.reduce((sum, v) => sum + (Number(v.audio_size) || 0), 0))}</div>
         <div class="label">音频总大小</div>
       </div>
     </div>
@@ -268,8 +268,8 @@ class ExporterService {
 
 - **总视频数**: ${videos.length}
 - **下载成功**: ${videos.filter(v => v.status === 'completed').length}
-- **视频总大小**: ${this.formatFileSize(videos.reduce((sum, v) => sum + (v.video_size || 0), 0))}
-- **音频总大小**: ${this.formatFileSize(videos.reduce((sum, v) => sum + (v.audio_size || 0), 0))}
+- **视频总大小**: ${this.formatFileSize(videos.reduce((sum, v) => sum + (Number(v.video_size) || 0), 0))}
+- **音频总大小**: ${this.formatFileSize(videos.reduce((sum, v) => sum + (Number(v.audio_size) || 0), 0))}
 
 ## 视频列表
 
@@ -352,24 +352,51 @@ ${rows}
     const filename = `youtube_videos_${Date.now()}.png`;
     const filepath = path.join(this.exportDir, filename);
     
+    let browser = null;
     try {
-      const browser = await puppeteer.launch({
+      // Launch browser with optimized settings
+      browser = await puppeteer.launch({
         headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-software-rasterizer',
+          '--disable-extensions'
+        ],
+        timeout: 30000 // 30 second timeout
       });
       
       const page = await browser.newPage();
-      await page.setViewport({ width: 1400, height: 1000 });
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      
+      // Set viewport
+      await page.setViewport({ 
+        width: 1400, 
+        height: 1000,
+        deviceScaleFactor: 1
+      });
+      
+      // Set content with timeout
+      await page.setContent(html, { 
+        waitUntil: 'domcontentloaded', // Changed from networkidle0 to domcontentloaded
+        timeout: 15000 // 15 second timeout
+      });
+      
+      // Wait a bit for rendering
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Take screenshot of full page
       await page.screenshot({ 
         path: filepath, 
         fullPage: true,
-        type: 'png'
+        type: 'png',
+        timeout: 15000 // 15 second timeout
       });
       
+      // Close browser
       await browser.close();
+      browser = null;
       
       return {
         success: true,
@@ -379,6 +406,16 @@ ${rows}
       };
     } catch (error) {
       console.error('PNG generation error:', error);
+      
+      // Ensure browser is closed even on error
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeError) {
+          console.error('Error closing browser:', closeError);
+        }
+      }
+      
       throw new Error('Failed to generate PNG: ' + error.message);
     }
   }
@@ -429,8 +466,8 @@ ${rows}
         { '统计项目': '总视频数', '值': videos.length },
         { '统计项目': '下载成功', '值': videos.filter(v => v.status === 'completed').length },
         { '统计项目': '下载失败', '值': videos.filter(v => v.status === 'failed').length },
-        { '统计项目': '视频总大小', '值': this.formatFileSize(videos.reduce((sum, v) => sum + (v.video_size || 0), 0)) },
-        { '统计项目': '音频总大小', '值': this.formatFileSize(videos.reduce((sum, v) => sum + (v.audio_size || 0), 0)) },
+        { '统计项目': '视频总大小', '值': this.formatFileSize(videos.reduce((sum, v) => sum + (Number(v.video_size) || 0), 0)) },
+        { '统计项目': '音频总大小', '值': this.formatFileSize(videos.reduce((sum, v) => sum + (Number(v.audio_size) || 0), 0)) },
         { '统计项目': '导出时间', '值': this.formatDate(new Date()) }
       ];
       const wsSummary = XLSX.utils.json_to_sheet(summary);
