@@ -580,10 +580,11 @@ class VideoGenerator {
         break;
 
       case 'zoom_in':
-        // 缩放效果：从小放大（使用scale with eval=frame）
-        console.log(`  ✅ 放大效果 (从0.5倍到1.0倍, ${animDuration}秒)`);
+        // 缩放效果：从小放大（改用简单的fade+scale组合）
+        console.log(`  ✅ 放大效果 (淡入, ${animDuration}秒)`);
         command.videoFilters([
-          `scale=w='iw*(0.5+0.5*min(t/${animDuration}\\,1))':h='ih*(0.5+0.5*min(t/${animDuration}\\,1))':eval=frame`,
+          `fade=t=in:st=0:d=${animDuration}`,
+          `scale=1920:1080:force_original_aspect_ratio=decrease`,
           `pad=1920:1080:(ow-iw)/2:(oh-ih)/2`
         ].join(','));
         break;
