@@ -34,9 +34,14 @@ class ExportService {
 
   // 格式化时长
   formatDuration(seconds) {
-    if (!seconds) return '0:00';
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
+    // 确保输入是有效数字
+    const numSeconds = parseFloat(seconds);
+    if (!numSeconds || isNaN(numSeconds) || numSeconds < 0) return '0:00';
+    
+    const totalSecs = Math.floor(numSeconds);
+    const m = Math.floor(totalSecs / 60);
+    const s = totalSecs % 60;
+    
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
