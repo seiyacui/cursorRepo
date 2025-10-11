@@ -279,38 +279,74 @@ class VideoGenerator {
     const textLength = textContent.length;
     const fps = video.video_fps || 30;
     const animDuration = parseFloat(video.animation_duration) || 2.0;
+    const slideDuration = video.slide_duration || 5; // 幻灯片总时长
     
-    // 计算需要的帧数
-    const totalFrames = Math.ceil(animDuration * fps);
-    const charsPerFrame = textLength / totalFrames;
+    // 计算打字动画的帧数
+    const typingFrames = Math.ceil(animDuration * fps);
+    const charsPerFrame = textLength / typingFrames;
     
-    console.log(`⌨️  打字机序列: ${textLength}字符, ${totalFrames}帧, ${charsPerFrame.toFixed(2)}字符/帧`);
+    // 计算总帧数（整个幻灯片时长）
+    const totalFrames = Math.ceil(slideDuration * fps);
+    
+    console.log(`⌨️  打字机序列配置:`);
+    console.log(`   - 文本长度: ${textLength}字符`);
+    console.log(`   - 打字动画: ${animDuration}秒 (${typingFrames}帧)`);
+    console.log(`   - 幻灯片总时长: ${slideDuration}秒 (${totalFrames}帧)`);
+    console.log(`   - 打字速度: ${charsPerFrame.toFixed(2)}字符/帧`);
     
     // 创建序列目录
     const sequenceDir = path.join(this.tempPath, `typewriter_${video.id}_${Date.now()}`);
     await fs.mkdir(sequenceDir, { recursive: true });
     
-    // 生成每一帧
-    for (let i = 0; i <= totalFrames; i++) {
+    let frameIndex = 0;
+    
+    // 阶段1: 生成打字动画帧（0到textLength字符）
+    console.log(`⌨️  阶段1: 生成打字动画帧 (0-${typingFrames})`);
+    for (let i = 0; i <= typingFrames; i++) {
       const charsToShow = Math.min(Math.ceil(i * charsPerFrame), textLength);
       
       // 生成该帧的图像（只显示前N个字符）
       const frameImage = await this.generateTextImage(video, charsToShow);
       
       // 复制到序列目录
-      const frameName = `frame_${String(i).padStart(4, '0')}.png`;
+      const frameName = `frame_${String(frameIndex).padStart(4, '0')}.png`;
       const framePath = path.join(sequenceDir, frameName);
       await fs.copyFile(frameImage, framePath);
-      
-      // 删除临时文件
       await fs.unlink(frameImage);
       
-      if (i % 10 === 0 || i === totalFrames) {
-        console.log(`⌨️  已生成打字帧: ${i}/${totalFrames} (显示${charsToShow}/${textLength}字符)`);
+      frameIndex++;
+      
+      if (i % 10 === 0 || i === typingFrames) {
+        console.log(`   ⌨️  打字帧: ${i}/${typingFrames} (显示${charsToShow}/${textLength}字符)`);
       }
     }
     
+    // 阶段2: 生成静态完整文本帧（填充剩余时长）
+    const remainingFrames = totalFrames - frameIndex;
+    if (remainingFrames > 0) {
+      console.log(`⌨️  阶段2: 生成静态完整文本帧 (${frameIndex}-${totalFrames-1})`);
+      
+      // 生成完整文本的图像
+      const fullTextImage = await this.generateTextImage(video, null);
+      
+      // 复制多次以填充剩余时长
+      for (let i = 0; i < remainingFrames; i++) {
+        const frameName = `frame_${String(frameIndex).padStart(4, '0')}.png`;
+        const framePath = path.join(sequenceDir, frameName);
+        await fs.copyFile(fullTextImage, framePath);
+        frameIndex++;
+        
+        if (i % 30 === 0 || i === remainingFrames - 1) {
+          console.log(`   📄 静态帧: ${i+1}/${remainingFrames}`);
+        }
+      }
+      
+      // 删除临时完整文本图像
+      await fs.unlink(fullTextImage);
+    }
+    
     console.log(`✅ 打字机图像序列生成完成: ${sequenceDir}`);
+    console.log(`   总帧数: ${frameIndex}, 视频时长: ${(frameIndex/fps).toFixed(2)}秒`);
     return sequenceDir;  // 返回目录路径
   }
 
