@@ -580,11 +580,12 @@ class VideoGenerator {
         break;
 
       case 'zoom_in':
-        // 缩放效果：从小放大（使用scale代替zoompan避免时长问题）
+        // 缩放效果：从小放大（使用scale with eval=frame）
         console.log(`  ✅ 放大效果 (从0.5倍到1.0倍, ${animDuration}秒)`);
-        command.videoFilters(
-          `scale='iw*(0.5+0.5*min(t/${animDuration}\\,1))':'ih*(0.5+0.5*min(t/${animDuration}\\,1))',pad=1920:1080:(ow-iw)/2:(oh-ih)/2`
-        );
+        command.videoFilters([
+          `scale=w='iw*(0.5+0.5*min(t/${animDuration}\\,1))':h='ih*(0.5+0.5*min(t/${animDuration}\\,1))':eval=frame`,
+          `pad=1920:1080:(ow-iw)/2:(oh-ih)/2`
+        ].join(','));
         break;
 
       case 'zoom_out':
