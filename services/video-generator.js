@@ -535,11 +535,11 @@ class VideoGenerator {
     switch (animation) {
       case 'fade':
         // 淡入淡出效果
-        const fadeInDuration = Math.min(1, duration * 0.2);
-        const fadeOutStart = Math.max(0, duration - 1);
+        const fadeInDuration = animDuration;
+        const fadeOutStart = Math.max(0, duration - animDuration);
         console.log(`  ✅ 淡入淡出: 淡入${fadeInDuration}s, 淡出从${fadeOutStart}s开始`);
         command.videoFilters(
-          `fade=t=in:st=0:d=${fadeInDuration},fade=t=out:st=${fadeOutStart}:d=1`
+          `fade=t=in:st=0:d=${fadeInDuration},fade=t=out:st=${fadeOutStart}:d=${animDuration}`
         );
         break;
 
@@ -581,107 +581,107 @@ class VideoGenerator {
 
       case 'zoom_in':
         // 缩放效果：从小放大
-        console.log(`  ✅ 放大效果 (从0.5倍到1.0倍)`);
-        const frames = Math.floor(duration * 25); // 25fps
+        console.log(`  ✅ 放大效果 (从0.5倍到1.0倍, ${animDuration}秒)`);
+        const frames = Math.floor(animDuration * 25); // 使用动画时长
+        const totalFrames = Math.floor(duration * 25);
         command.videoFilters(
-          `zoompan=z='0.5+0.5*min(on/${frames}\\,1)':d=${frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=25`
+          `zoompan=z='0.5+0.5*min(on/${frames}\\,1)':d=${totalFrames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=25`
         );
         break;
 
       case 'zoom_out':
         // 缩放效果：从大缩小
-        console.log(`  ✅ 缩小效果 (从1.5倍到1.0倍)`);
-        const framesOut = Math.floor(duration * 25);
+        console.log(`  ✅ 缩小效果 (从1.5倍到1.0倍, ${animDuration}秒)`);
+        const framesOut = Math.floor(animDuration * 25); // 使用动画时长
+        const totalFramesOut = Math.floor(duration * 25);
         command.videoFilters(
-          `zoompan=z='1.5-0.5*min(on/${framesOut}\\,1)':d=${framesOut}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=25`
+          `zoompan=z='1.5-0.5*min(on/${framesOut}\\,1)':d=${totalFramesOut}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=25`
         );
         break;
 
       case 'rotate':
         // 旋转效果 - 顺时针360度
-        console.log(`  ✅ 旋转效果 (顺时针360度)`);
-        const rotateDuration = Math.min(2, duration);
+        console.log(`  ✅ 旋转效果 (顺时针360度, ${animDuration}秒)`);
         command.videoFilters([
           `scale=iw*1.5:ih*1.5`,
-          `rotate='2*PI*min(t/${rotateDuration}\\,1)':c=black`,
+          `rotate='2*PI*min(t/${animDuration}\\,1)':c=black`,
           `crop=iw/1.5:ih/1.5`
         ].join(','));
         break;
 
       case 'rotate_reverse':
         // 旋转效果 - 逆时针360度
-        console.log(`  ✅ 旋转效果 (逆时针360度)`);
-        const rotateRevDuration = Math.min(2, duration);
+        console.log(`  ✅ 旋转效果 (逆时针360度, ${animDuration}秒)`);
         command.videoFilters([
           `scale=iw*1.5:ih*1.5`,
-          `rotate='-2*PI*min(t/${rotateRevDuration}\\,1)':c=black`,
+          `rotate='-2*PI*min(t/${animDuration}\\,1)':c=black`,
           `crop=iw/1.5:ih/1.5`
         ].join(','));
         break;
 
       case 'spin':
         // 快速旋转 - 3圈
-        console.log(`  ✅ 快速旋转 (3圈)`);
-        const spinDuration = Math.min(2, duration);
+        console.log(`  ✅ 快速旋转 (3圈, ${animDuration}秒)`);
         command.videoFilters([
           `scale=iw*1.5:ih*1.5`,
-          `rotate='6*PI*min(t/${spinDuration}\\,1)':c=black`,
+          `rotate='6*PI*min(t/${animDuration}\\,1)':c=black`,
           `crop=iw/1.5:ih/1.5`
         ].join(','));
         break;
 
       case 'bounce':
         // 弹跳效果 - 上下弹跳
-        console.log(`  ✅ 弹跳效果 (上下弹跳)`);
+        console.log(`  ✅ 弹跳效果 (上下弹跳, ${animDuration}秒)`);
         const bounceHeight = 150;
         const bounceFreq = 3;
         command.videoFilters([
           `pad=iw:ih+${bounceHeight}:0:${bounceHeight/2}`,
-          `crop=iw:ih:0:${bounceHeight/2}+${bounceHeight/2}*abs(sin(${bounceFreq}*2*PI*t/${duration}))`
+          `crop=iw:ih:0:${bounceHeight/2}+${bounceHeight/2}*abs(sin(${bounceFreq}*2*PI*t/${animDuration}))`
         ].join(','));
         break;
 
       case 'bounce_horizontal':
         // 水平弹跳
-        console.log(`  ✅ 水平弹跳 (左右跳动)`);
+        console.log(`  ✅ 水平弹跳 (左右跳动, ${animDuration}秒)`);
         const bounceWidth = 150;
         const hBounceFreq = 3;
         command.videoFilters([
           `pad=iw+${bounceWidth}:ih:${bounceWidth/2}:0`,
-          `crop=iw:ih:${bounceWidth/2}+${bounceWidth/2}*abs(sin(${hBounceFreq}*2*PI*t/${duration})):0`
+          `crop=iw:ih:${bounceWidth/2}+${bounceWidth/2}*abs(sin(${hBounceFreq}*2*PI*t/${animDuration})):0`
         ].join(','));
         break;
 
       case 'shake':
         // 抖动效果
-        console.log(`  ✅ 抖动效果 (震动)`);
+        console.log(`  ✅ 抖动效果 (震动, ${animDuration}秒)`);
         const shakeAmount = 10;
+        const shakeIntensity = Math.min(animDuration * 10, 20); // 时长越短，震动越快
         command.videoFilters([
           `pad=iw+${shakeAmount*2}:ih+${shakeAmount*2}:${shakeAmount}:${shakeAmount}`,
-          `crop=iw:ih:${shakeAmount}+${shakeAmount}*sin(20*2*PI*t/${duration}):${shakeAmount}+${shakeAmount}*cos(20*2*PI*t/${duration})`
+          `crop=iw:ih:${shakeAmount}+${shakeAmount}*sin(${shakeIntensity}*2*PI*t/${animDuration}):${shakeAmount}+${shakeAmount}*cos(${shakeIntensity}*2*PI*t/${animDuration})`
         ].join(','));
         break;
 
       case 'swing':
         // 摆动效果（钟摆）
-        console.log(`  ✅ 摆动效果 (钟摆)`);
+        console.log(`  ✅ 摆动效果 (钟摆, ${animDuration}秒)`);
         const swingAngle = 0.3;  // 弧度
         const swingFreq = 2;
         command.videoFilters([
           `scale=iw*1.5:ih*1.5`,
-          `rotate='${swingAngle}*sin(${swingFreq}*2*PI*t/${duration})':c=black`,
+          `rotate='${swingAngle}*sin(${swingFreq}*2*PI*t/${animDuration})':c=black`,
           `crop=iw/1.5:ih/1.5`
         ].join(','));
         break;
 
       case 'wave':
         // 波浪效果
-        console.log(`  ✅ 波浪效果 (上下波动)`);
+        console.log(`  ✅ 波浪效果 (上下波动, ${animDuration}秒)`);
         const waveHeight = 50;
         const waveFreq = 4;
         command.videoFilters([
           `pad=iw:ih+${waveHeight*2}:0:${waveHeight}`,
-          `crop=iw:ih:0:${waveHeight}+${waveHeight}*sin(${waveFreq}*2*PI*t/${duration})`
+          `crop=iw:ih:0:${waveHeight}+${waveHeight}*sin(${waveFreq}*2*PI*t/${animDuration})`
         ].join(','));
         break;
 
@@ -705,21 +705,21 @@ class VideoGenerator {
 
       case 'blink':
         // 闪烁效果
-        console.log(`  ✅ 闪烁效果 (快速闪动)`);
+        console.log(`  ✅ 闪烁效果 (快速闪动, ${animDuration}秒)`);
         const blinkFreq = 6;
-        command.videoFilters(`fade=t=in:st=0:d=${animDuration},colorchannelmixer=aa='0.5+0.5*sin(${blinkFreq}*2*PI*t/${duration})'`);
+        command.videoFilters(`fade=t=in:st=0:d=${animDuration},colorchannelmixer=aa='0.5+0.5*sin(${blinkFreq}*2*PI*t/${animDuration})'`);
         break;
 
       case 'pulse':
         // 脉冲效果
-        console.log(`  ✅ 脉冲效果 (心跳)`);
+        console.log(`  ✅ 脉冲效果 (心跳, ${animDuration}秒)`);
         const pulseFreq = 2;
-        command.videoFilters(`scale='iw*(1+0.1*abs(sin(${pulseFreq}*2*PI*t/${duration})))':'ih*(1+0.1*abs(sin(${pulseFreq}*2*PI*t/${duration})))'`);
+        command.videoFilters(`scale='iw*(1+0.1*abs(sin(${pulseFreq}*2*PI*t/${animDuration})))':'ih*(1+0.1*abs(sin(${pulseFreq}*2*PI*t/${animDuration})))'`);
         break;
 
       case 'blur_in':
         // 模糊到清晰
-        console.log(`  ✅ 模糊到清晰`);
+        console.log(`  ✅ 模糊到清晰 (${animDuration}秒)`);
         command.videoFilters(`boxblur='10*max(0\\,1-t/${animDuration})':'10*max(0\\,1-t/${animDuration})'`);
         break;
 
@@ -749,11 +749,10 @@ class VideoGenerator {
 
       case 'spiral':
         // 螺旋进入
-        console.log(`  ✅ 螺旋进入`);
-        const spiralDuration = Math.min(2, duration);
+        console.log(`  ✅ 螺旋进入 (${animDuration}秒)`);
         command.videoFilters([
           `scale=iw*1.5:ih*1.5`,
-          `rotate='4*PI*min(t/${spiralDuration}\\,1)':c=black`,
+          `rotate='4*PI*min(t/${animDuration}\\,1)':c=black`,
           `crop=iw/1.5:ih/1.5`
         ].join(','));
         break;
@@ -766,9 +765,9 @@ class VideoGenerator {
 
       case 'rubber':
         // 橡皮筋效果
-        console.log(`  ✅ 橡皮筋效果 (拉伸)`);
+        console.log(`  ✅ 橡皮筋效果 (拉伸, ${animDuration}秒)`);
         command.videoFilters([
-          `scale='iw*(1+0.3*sin(3*2*PI*t/${duration}))':'ih*(1-0.3*sin(3*2*PI*t/${duration}))'`
+          `scale='iw*(1+0.3*sin(3*2*PI*t/${animDuration}))':'ih*(1-0.3*sin(3*2*PI*t/${animDuration}))'`
         ].join(','));
         break;
 
