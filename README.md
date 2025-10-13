@@ -12,6 +12,7 @@
 - ✅ **搜索筛选**: 支持关键字和时间范围搜索
 - ✅ **多格式导出**: Excel, HTML, TXT, Markdown
 - ✅ **一键下载**: 方便的图片下载功能
+- ✅ **四渠道通知**: WxPusher/PushPlus/Email/Telegram 自动通知
 
 ### 界面特性
 - 🎨 美观的 Gradio 界面
@@ -102,6 +103,64 @@ python3 app.py
 ```
 
 访问: **http://localhost:7860**
+
+## 🔔 通知配置（可选）
+
+系统支持4种通知渠道，在图片生成完成后自动发送通知。
+
+### 配置通知凭证
+
+编辑 `.env` 文件：
+
+```env
+# 启用通知
+ENABLE_NOTIFICATIONS=true
+
+# WxPusher（微信推送）
+WXPUSHER_TOKEN=your_token
+WXPUSHER_UID=your_uid
+
+# PushPlus（微信推送）
+PUSHPLUS_TOKEN=your_token
+
+# Resend Email（邮件通知）
+RESEND_API_KEY=your_api_key
+RESEND_TO_EMAIL=your_email@example.com
+
+# Telegram（Telegram机器人）
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=your_chat_id
+```
+
+### 获取凭证
+
+1. **WxPusher**: 访问 https://wxpusher.zjiecode.com/ 注册获取
+2. **PushPlus**: 访问 http://www.pushplus.plus/ 获取 Token
+3. **Resend**: 访问 https://resend.com/ 注册获取 API Key
+4. **Telegram**: 
+   - 与 @BotFather 对话创建 Bot
+   - 获取 Bot Token
+   - 与 @userinfobot 对话获取 Chat ID
+
+### 通知内容
+
+通知将包含：
+- ✅ 生成状态
+- 📝 文本内容（前200字）
+- 📊 文件大小
+- ⏱️ 生成耗时
+- 🔢 生成参数
+
+### 禁用通知
+
+如不需要通知，设置：
+```env
+ENABLE_NOTIFICATIONS=false
+```
+
+或不配置任何通知凭证，系统会自动跳过。
+
+---
 
 ## 📖 使用指南
 

@@ -26,6 +26,11 @@ DB_PASSWORD=your_secure_password
 
 # HuggingFace 缓存目录（重要！）
 HF_HOME=/Volumes/Mont125 - Données/Users/seigneur/.cache/tahoe26/huggingface
+
+# 通知配置（可选）
+ENABLE_NOTIFICATIONS=true
+WXPUSHER_TOKEN=your_token  # 微信推送
+WXPUSHER_UID=your_uid
 ```
 
 ### 步骤 3: 启动应用
@@ -69,6 +74,13 @@ python3 app.py
 1. 选择导出格式（Excel/HTML/TXT/Markdown）
 2. 点击 **"📤 导出"**
 3. 下载生成的文件
+
+### 配置通知（可选）
+
+1. 切换到 **"🔔 通知设置"** 标签
+2. 查看通知配置说明
+3. 编辑 `.env` 配置通知凭证
+4. 测试通知：`python3 test_notification.py single`
 
 ---
 

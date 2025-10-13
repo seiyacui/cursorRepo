@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from text2image_generator import Text2ImageGenerator
 from database.db_manager import DatabaseManager
 from export_manager import ExportManager
+from notification_service import notification_service
 
 load_dotenv()
 
@@ -84,6 +85,17 @@ def generate_image_ui(prompt, output_dir, num_steps, guidance, progress=gr.Progr
 🔢 推理步数: {result['num_inference_steps']}
 📈 引导比例: {result['guidance_scale']}
 """
+        
+        # 发送通知
+        enable_notifications = os.getenv('ENABLE_NOTIFICATIONS', 'true').lower() == 'true'
+        if enable_notifications:
+            try:
+                print("📢 准备发送通知...")
+                notification_service.send_image_generation_notification(result)
+                success_msg += "\n🔔 通知已发送到配置的渠道"
+            except Exception as notify_error:
+                print(f"⚠️  通知发送失败: {notify_error}")
+                success_msg += f"\n⚠️  通知发送失败: {str(notify_error)}"
         
         # 刷新列表
         table_data = refresh_table()
@@ -320,6 +332,58 @@ with gr.Blocks(
         export_file = gr.File(label="导出文件")
         export_status = gr.Textbox(label="导出状态")
     
+    with gr.Tab("🔔 通知设置"):
+        gr.Markdown("### 📢 通知配置")
+        
+        gr.Markdown(
+            """
+            系统支持4种通知渠道，在图片生成完成后自动发送通知：
+            
+            1. **WxPusher** - 微信推送
+            2. **PushPlus** - 微信推送
+            3. **Resend Email** - 邮件通知
+            4. **Telegram** - Telegram 机器人
+            
+            ### 📝 配置方法
+            
+            编辑 `.env` 文件，配置通知凭证：
+            
+            ```env
+            # WxPusher
+            WXPUSHER_TOKEN=your_token
+            WXPUSHER_UID=your_uid
+            
+            # PushPlus
+            PUSHPLUS_TOKEN=your_token
+            
+            # Resend Email
+            RESEND_API_KEY=your_api_key
+            RESEND_TO_EMAIL=your_email
+            
+            # Telegram
+            TELEGRAM_BOT_TOKEN=your_bot_token
+            TELEGRAM_CHAT_ID=your_chat_id
+            
+            # 启用/禁用通知
+            ENABLE_NOTIFICATIONS=true
+            ```
+            
+            ### 🔗 获取凭证
+            
+            - **WxPusher**: https://wxpusher.zjiecode.com/
+            - **PushPlus**: http://www.pushplus.plus/
+            - **Resend**: https://resend.com/
+            - **Telegram**: 创建 Bot 获取 Token
+            
+            ### 💡 提示
+            
+            - 至少配置一个渠道即可
+            - 未配置的渠道会自动跳过
+            - 通知失败不影响图片生成
+            - 可以设置 `ENABLE_NOTIFICATIONS=false` 禁用所有通知
+            """
+        )
+    
     with gr.Tab("ℹ️ 使用说明"):
         gr.Markdown(
             """
@@ -355,6 +419,7 @@ with gr.Blocks(
             - 文本描述越详细，生成效果越好
             - 推理步数建议 20-35 之间
             - 所有生成的图片都会自动保存到数据库
+            - 配置通知后，生成完成会自动发送消息
             
             ### ⚙️ 技术信息
             

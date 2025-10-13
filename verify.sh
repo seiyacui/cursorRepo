@@ -1,24 +1,22 @@
 #!/bin/bash
 
-# YouTube Video Downloader - Installation Verification Script
-# 安装验证脚本
+# 文本转图片生成器 - 环境验证脚本
 
 echo ""
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║  🔍 YouTube 视频批量下载器 - 安装验证                      ║"
+echo "║  🔍 文本转图片生成器 - 环境验证                            ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 
 ERRORS=0
 WARNINGS=0
 
-# Color codes
+# 颜色
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Function to check command
 check_command() {
     if command -v $1 &> /dev/null; then
         echo -e "  ${GREEN}✅${NC} $1: $(command -v $1)"
@@ -33,7 +31,6 @@ check_command() {
     fi
 }
 
-# Function to check file
 check_file() {
     if [ -f "$1" ]; then
         echo -e "  ${GREEN}✅${NC} $1"
@@ -45,7 +42,6 @@ check_file() {
     fi
 }
 
-# Function to check directory
 check_dir() {
     if [ -d "$1" ]; then
         echo -e "  ${GREEN}✅${NC} $1/"
@@ -61,10 +57,9 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "1️⃣  检查系统依赖"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-check_command "node" "--version"
-check_command "npm" "--version"
+check_command "python3" "--version"
+check_command "pip3" "--version"
 check_command "psql" "--version"
-check_command "yt-dlp" "--version"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -72,76 +67,58 @@ echo "2️⃣  检查项目文件"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 echo "核心文件:"
-check_file "server.js"
-check_file "package.json"
+check_file "app.py"
+check_file "text2image_generator.py"
+check_file "export_manager.py"
+check_file "requirements.txt"
 check_file ".env"
-check_file ".gitignore"
 
 echo ""
 echo "数据库模块:"
-check_file "db/init.js"
-check_file "db/database.js"
-
-echo ""
-echo "服务模块:"
-check_file "services/downloader.js"
-check_file "services/export.js"
-check_file "services/notificationAdapter.js"
-
-echo ""
-echo "前端文件:"
-check_file "public/index.html"
-check_file "public/styles.css"
-check_file "public/app.js"
-
-echo ""
-echo "文档文件:"
-check_file "README.md"
-check_file "QUICKSTART.md"
+check_file "database/init_db.py"
+check_file "database/db_manager.py"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "3️⃣  检查目录结构"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-check_dir "db"
-check_dir "services"
-check_dir "public"
-check_dir "downloads" || echo "     (将在首次运行时自动创建)"
-check_dir "node_modules" || echo "     (运行 'npm install' 安装依赖)"
+check_dir "database"
+check_dir "outputs" || echo "     (将在首次运行时自动创建)"
+check_dir "exports" || echo "     (将在首次运行时自动创建)"
+check_dir "venv" || echo "     (可选，未使用虚拟环境)"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "4️⃣  检查 Node.js 依赖"
+echo "4️⃣  检查 Python 依赖"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if [ -d "node_modules" ]; then
-    echo -e "  ${GREEN}✅${NC} Node.js 依赖已安装"
-    
-    # Check key packages
-    if [ -d "node_modules/express" ]; then
-        echo -e "  ${GREEN}✅${NC} express"
-    else
-        echo -e "  ${RED}❌${NC} express"
-        ((ERRORS++))
-    fi
-    
-    if [ -d "node_modules/pg" ]; then
-        echo -e "  ${GREEN}✅${NC} pg (PostgreSQL)"
-    else
-        echo -e "  ${RED}❌${NC} pg (PostgreSQL)"
-        ((ERRORS++))
-    fi
-    
-    if [ -d "node_modules/ws" ]; then
-        echo -e "  ${GREEN}✅${NC} ws (WebSocket)"
-    else
-        echo -e "  ${RED}❌${NC} ws (WebSocket)"
-        ((ERRORS++))
-    fi
+if python3 -c "import gradio" &> /dev/null; then
+    echo -e "  ${GREEN}✅${NC} gradio"
 else
-    echo -e "  ${YELLOW}⚠️${NC}  node_modules 不存在，请运行: npm install"
-    ((WARNINGS++))
+    echo -e "  ${RED}❌${NC} gradio"
+    ((ERRORS++))
+fi
+
+if python3 -c "import diffusers" &> /dev/null; then
+    echo -e "  ${GREEN}✅${NC} diffusers"
+else
+    echo -e "  ${RED}❌${NC} diffusers"
+    ((ERRORS++))
+fi
+
+if python3 -c "import torch" &> /dev/null; then
+    echo -e "  ${GREEN}✅${NC} torch"
+else
+    echo -e "  ${RED}❌${NC} torch"
+    ((ERRORS++))
+fi
+
+if python3 -c "import psycopg2" &> /dev/null; then
+    echo -e "  ${GREEN}✅${NC} psycopg2"
+else
+    echo -e "  ${RED}❌${NC} psycopg2"
+    ((ERRORS++))
 fi
 
 echo ""
@@ -152,20 +129,21 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 if [ -f ".env" ]; then
     echo -e "  ${GREEN}✅${NC} .env 配置文件存在"
     
-    # Check key configurations
     if grep -q "DB_NAME" .env; then
         DB_NAME=$(grep "DB_NAME" .env | cut -d'=' -f2)
         echo "     数据库名称: $DB_NAME"
     fi
     
-    if grep -q "PORT" .env; then
-        PORT=$(grep "PORT" .env | cut -d'=' -f2)
-        echo "     服务器端口: $PORT"
-    fi
-    
-    if grep -q "MAX_CONCURRENT_DOWNLOADS" .env; then
-        MAX_CONCURRENT=$(grep "MAX_CONCURRENT_DOWNLOADS" .env | cut -d'=' -f2)
-        echo "     最大并发数: $MAX_CONCURRENT"
+    if grep -q "HF_HOME" .env; then
+        HF_HOME=$(grep "HF_HOME" .env | cut -d'=' -f2)
+        echo "     HF 缓存目录: $HF_HOME"
+        
+        if [ -d "$HF_HOME" ]; then
+            echo -e "     ${GREEN}✅${NC} 缓存目录存在"
+        else
+            echo -e "     ${YELLOW}⚠️${NC}  缓存目录不存在，将自动创建"
+            ((WARNINGS++))
+        fi
     fi
 else
     echo -e "  ${RED}❌${NC} .env 配置文件不存在"
@@ -182,7 +160,6 @@ if command -v psql &> /dev/null; then
     if pg_isready &> /dev/null; then
         echo -e "  ${GREEN}✅${NC} PostgreSQL 服务运行中"
         
-        # Try to connect to database
         if [ -f ".env" ] && grep -q "DB_NAME" .env; then
             DB_NAME=$(grep "DB_NAME" .env | cut -d'=' -f2)
             DB_USER=$(grep "DB_USER" .env | cut -d'=' -f2)
@@ -191,31 +168,36 @@ if command -v psql &> /dev/null; then
                 echo -e "  ${GREEN}✅${NC} 数据库 '$DB_NAME' 存在"
             else
                 echo -e "  ${YELLOW}⚠️${NC}  数据库 '$DB_NAME' 不存在"
-                echo "     请运行: npm run init-db"
+                echo "     请运行: python3 database/init_db.py"
                 ((WARNINGS++))
             fi
         fi
     else
         echo -e "  ${RED}❌${NC} PostgreSQL 服务未运行"
         echo "     macOS: brew services start postgresql"
-        echo "     Linux: sudo systemctl start postgresql"
         ((ERRORS++))
     fi
-else
-    echo -e "  ${RED}❌${NC} PostgreSQL 未安装"
-    ((ERRORS++))
 fi
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "7️⃣  检查网络连接"
+echo "7️⃣  检查系统资源"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if curl -s --connect-timeout 5 https://www.youtube.com > /dev/null; then
-    echo -e "  ${GREEN}✅${NC} 可以访问 YouTube"
-else
-    echo -e "  ${YELLOW}⚠️${NC}  无法访问 YouTube（可能需要代理）"
-    ((WARNINGS++))
+# 检查内存
+if command -v sysctl &> /dev/null; then
+    TOTAL_MEM=$(sysctl -n hw.memsize 2>/dev/null)
+    if [ ! -z "$TOTAL_MEM" ]; then
+        TOTAL_MEM_GB=$((TOTAL_MEM / 1024 / 1024 / 1024))
+        echo "  总内存: ${TOTAL_MEM_GB}GB"
+        
+        if [ $TOTAL_MEM_GB -ge 16 ]; then
+            echo -e "  ${GREEN}✅${NC} 内存充足"
+        else
+            echo -e "  ${YELLOW}⚠️${NC}  内存较少，建议 16GB+"
+            ((WARNINGS++))
+        fi
+    fi
 fi
 
 echo ""
@@ -229,50 +211,34 @@ if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
     echo -e "${GREEN}║  ✅ 完美！所有检查都通过了！                       ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo "🚀 可以启动服务器了："
-    echo "   npm start"
-    echo ""
-    echo "📖 访问文档："
-    echo "   README.md        - 完整文档"
-    echo "   QUICKSTART.md    - 快速开始"
+    echo "🚀 可以启动应用了："
+    echo "   python3 app.py"
     echo ""
 elif [ $ERRORS -eq 0 ] && [ $WARNINGS -gt 0 ]; then
     echo -e "${YELLOW}╔════════════════════════════════════════════════════╗${NC}"
     echo -e "${YELLOW}║  ⚠️  有 $WARNINGS 个警告，但可以继续                  ║${NC}"
     echo -e "${YELLOW}╚════════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo "💡 建议："
-    echo "   1. 查看上面的警告信息"
-    echo "   2. 解决警告后体验会更好"
-    echo "   3. 如果急用，可以先启动：npm start"
+    echo "💡 建议查看上面的警告信息"
+    echo "🚀 可以启动: python3 app.py"
     echo ""
 else
     echo -e "${RED}╔════════════════════════════════════════════════════╗${NC}"
     echo -e "${RED}║  ❌ 发现 $ERRORS 个错误，$WARNINGS 个警告                 ║${NC}"
     echo -e "${RED}╚════════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo "🔧 请先修复以下问题："
+    echo "🔧 请先修复错误："
     
-    if ! command -v node &> /dev/null; then
-        echo "   • 安装 Node.js: https://nodejs.org/"
+    if ! command -v python3 &> /dev/null; then
+        echo "   • 安装 Python 3.8+"
     fi
     
     if ! command -v psql &> /dev/null; then
-        echo "   • 安装 PostgreSQL"
-        echo "     macOS: brew install postgresql"
-    fi
-    
-    if ! command -v yt-dlp &> /dev/null; then
-        echo "   • 安装 yt-dlp"
-        echo "     macOS: brew install yt-dlp"
-    fi
-    
-    if [ ! -d "node_modules" ]; then
-        echo "   • 安装 Node.js 依赖: npm install"
+        echo "   • 安装 PostgreSQL: brew install postgresql"
     fi
     
     if [ ! -f ".env" ]; then
-        echo "   • 创建配置文件: cp .env.example .env"
+        echo "   • 创建配置: cp .env.example .env"
     fi
     
     echo ""
