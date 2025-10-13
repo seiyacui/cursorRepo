@@ -1,28 +1,33 @@
-# Dependencies
-node_modules/
-package-lock.json
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
 
-# Environment variables
+# 环境配置
 .env
 
-# Downloads
-downloads/
-*.mp4
-*.mkv
-*.webm
-*.mp3
-*.aac
-*.wav
-*.m4a
+# 输出文件
+outputs/
+exports/
+*.png
+*.jpg
+*.jpeg
+*.xlsx
+*.html
+*.txt
+*.md
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-
-# OS files
-.DS_Store
-Thumbs.db
+# 数据库
+*.db
+*.sqlite
 
 # IDE
 .vscode/
@@ -30,15 +35,12 @@ Thumbs.db
 *.swp
 *.swo
 
-# Build files
-dist/
-build/
+# OS
+.DS_Store
+Thumbs.db
 
-# Temporary files
-tmp/
-temp/
-*.tmp
+# Logs
+*.log
 
-# Database dumps
-*.sql
-*.dump
+# HuggingFace 缓存（已在其他位置）
+.cache/

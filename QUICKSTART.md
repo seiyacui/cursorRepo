@@ -1,192 +1,150 @@
 # 🚀 快速开始指南
 
-## 一键安装（推荐）
+## 3 步启动应用
+
+### 步骤 1: 一键安装
 
 ```bash
 # 运行安装脚本
 ./setup.sh
 ```
 
-安装脚本会自动：
-- ✅ 检查依赖（Node.js, PostgreSQL, yt-dlp）
-- ✅ 安装 npm 包
+脚本会自动：
+- ✅ 检查 Python 和 PostgreSQL
+- ✅ 创建虚拟环境（可选）
+- ✅ 安装所有依赖
 - ✅ 创建配置文件
-- ✅ 创建下载目录
 - ✅ 初始化数据库
 
-## 手动安装
+### 步骤 2: 配置环境
 
-### 1. 安装依赖
+编辑 `.env` 文件，**重点配置**：
+
+```env
+# 数据库密码（必须修改）
+DB_PASSWORD=your_secure_password
+
+# HuggingFace 缓存目录（重要！）
+HF_HOME=/Volumes/Mont125 - Données/Users/seigneur/.cache/tahoe26/huggingface
+```
+
+### 步骤 3: 启动应用
 
 ```bash
-# 安装 Node.js 依赖
-npm install
+# 激活虚拟环境（如果使用）
+source venv/bin/activate
 
-# 安装 yt-dlp (如未安装)
-brew install yt-dlp
+# 启动应用
+python3 app.py
 ```
 
-### 2. 配置环境
+访问: **http://localhost:7860**
 
-```bash
-# 复制环境配置文件
-cp .env.example .env
+---
 
-# 编辑配置（修改数据库密码等）
-nano .env
-```
+## ⚡ 快速使用
 
-### 3. 初始化数据库
+### 生成第一张图片
 
-```bash
-# 创建数据库
-psql -U postgres -c "CREATE DATABASE youtube_downloader;"
+1. 在"文本内容"框输入：
+   ```
+   一个穿着'QWEN' T恤的中国美女，手持黑马克笔微笑，
+   身后玻璃板上手写：'Qwen-Image 的未来：赋能内容创作'
+   ```
 
-# 初始化表结构
-npm run init-db
-```
+2. 点击 **"🎨 生成图片"**
 
-### 4. 启动服务
+3. 等待生成完成（约 1-3 分钟）
 
-```bash
-# 生产模式
-npm start
+4. 点击 **下载** 保存图片
 
-# 开发模式（自动重启）
-npm run dev
-```
+### 查看历史记录
 
-### 5. 访问应用
-
-打开浏览器访问: **http://localhost:3000**
-
-## ⚡ 使用示例
-
-### 批量下载视频
-
-1. 在输入框中粘贴 YouTube 视频链接（每行一个）：
-```
-https://www.youtube.com/watch?v=xxxxx
-https://www.youtube.com/watch?v=yyyyy
-https://www.youtube.com/watch?v=zzzzz
-```
-
-2. 选择视频格式：**MP4**（推荐）
-3. 选择质量：**最佳质量**
-4. 勾选 **"同时下载音频"**，选择 **MP3** 格式
-5. 点击 **"开始下载"**
-
-### 实时监控
-
-下载过程中可以看到：
-- 📊 每个视频的下载进度
-- ⚡ 下载速度
-- ⏱️ 预计剩余时间
-- 📈 批次总体进度
-
-### 搜索和管理
-
-- 🔍 在搜索框输入关键字查找视频
-- 📅 选择日期范围筛选
-- 📥 点击 "视频" 或 "音频" 按钮下载文件
-- 🗑️ 点击 "删除" 按钮移除记录和文件
+1. 切换到 **"📊 数据管理"** 标签
+2. 查看所有生成记录
+3. 使用搜索功能筛选
 
 ### 导出数据
 
-点击导出按钮，支持格式：
-- 📄 **HTML** - 精美的网页报告
-- 📝 **Markdown** - Markdown 文档
-- 📕 **PDF** - PDF 文档
-- 🖼️ **PNG** - 截图
+1. 选择导出格式（Excel/HTML/TXT/Markdown）
+2. 点击 **"📤 导出"**
+3. 下载生成的文件
 
-## 🔧 常用命令
+---
+
+## 💡 快速技巧
+
+### 提高生成质量
+
+```python
+推理步数: 30-35   # 更高质量
+引导比例: 8.0-9.0  # 更贴合描述
+```
+
+### 加快生成速度
+
+```python
+推理步数: 20-25   # 更快速度
+引导比例: 6.0-7.0  # 平衡质量和速度
+```
+
+### Apple Silicon 用户
+
+如果使用 M1/M2/M3 Mac，可以尝试 MPS 加速：
+
+```env
+DEVICE=mps
+```
+
+---
+
+## 🐛 常见问题速查
+
+### Q: 安装失败
 
 ```bash
-# 启动服务器
-npm start
+# 确保 Python 版本
+python3 --version  # 需要 3.8+
 
-# 开发模式（自动重启）
-npm run dev
-
-# 初始化/重置数据库
-npm run init-db
-
-# 查看日志
-tail -f logs/app.log
-
-# 检查 yt-dlp 版本
-yt-dlp --version
-
-# 更新 yt-dlp
-brew upgrade yt-dlp
+# 手动安装依赖
+pip3 install -r requirements.txt
 ```
 
-## 🎯 配置优化
+### Q: 数据库错误
 
-### 提高下载速度
+```bash
+# 启动 PostgreSQL
+brew services start postgresql
 
-编辑 `.env` 文件：
-```env
-# 增加并发下载数（根据网络和机器性能调整）
-MAX_CONCURRENT_DOWNLOADS=5
+# 创建数据库
+psql -U postgres -c "CREATE DATABASE text2image_db;"
+
+# 初始化表
+python3 database/init_db.py
 ```
 
-### 更改下载目录
+### Q: 模型加载慢
 
-```env
-# 指定自定义下载目录
-DOWNLOAD_DIR=/path/to/your/downloads
+```
+首次使用会下载模型（约 10GB），需要耐心等待
+后续使用会从缓存加载，速度较快
 ```
 
-### 配置通知
+### Q: 内存不足
 
-```env
-# WxPusher
-WXPUSHER_TOKEN=your_token
-WXPUSHER_UID=your_uid
-
-# PushPlus
-PUSHPLUS_TOKEN=your_token
-
-# Email
-RESEND_API_KEY=your_api_key
-RESEND_TO_EMAIL=your_email
-
-# Telegram
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
+```
+建议至少 16GB 内存
+关闭其他占用内存的程序
+降低推理步数到 20-25
 ```
 
-## 🐛 常见问题
-
-### Q: 下载失败 "yt-dlp: command not found"
-**A:** 安装 yt-dlp: `brew install yt-dlp`
-
-### Q: 数据库连接失败
-**A:** 检查 PostgreSQL 是否运行: `brew services start postgresql`
-
-### Q: 下载速度慢
-**A:** 增加 `MAX_CONCURRENT_DOWNLOADS` 值，或检查网络连接
-
-### Q: 视频质量不理想
-**A:** 选择 "最佳质量" 选项，或尝试不同的视频格式
-
-### Q: 中文显示乱码
-**A:** 确保浏览器编码设置为 UTF-8
+---
 
 ## 📞 获取帮助
 
 - 📖 查看完整文档: [README.md](README.md)
-- 🐛 报告问题: 提交 GitHub Issue
-- 💬 讨论交流: GitHub Discussions
+- 🐛 提交问题: GitHub Issues
 
-## 🎉 开始使用
+---
 
-现在可以开始批量下载 YouTube 视频了！
-
-```bash
-npm start
-# 访问 http://localhost:3000
-```
-
-享受便捷的批量下载体验！ 🚀
+**现在开始创作吧！🎨**

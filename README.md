@@ -1,311 +1,338 @@
-# 🎬 YouTube 视频批量下载器
+# 🎨 文本转图片生成器
 
-基于 Node.js + PostgreSQL + WebUI 的 YouTube 视频批量下载和数据管理工具。
+基于 **Qwen-Image** 模型的文本转图片生成工具，使用 Gradio + PostgreSQL + Python 构建。
 
 ## ✨ 功能特性
 
 ### 核心功能
-- ✅ **批量下载**: 支持同时下载多个 YouTube 视频
-- ✅ **多格式支持**: 视频格式 (MP4, MKV, WebM)，音频格式 (MP3, AAC, WAV, M4A)
-- ✅ **并发下载**: 支持配置并发下载数量，提高下载效率
-- ✅ **实时进度**: WebSocket 实时显示下载进度、速度和预计时间
-- ✅ **数据管理**: PostgreSQL 存储视频元数据，支持搜索和筛选
-- ✅ **多格式导出**: 支持导出为 HTML, PDF, Markdown, PNG 格式
-- ✅ **四通道通知**: 下载完成后通过 WxPusher、PushPlus、Resend Email、Telegram 发送通知
-- ✅ **中文支持**: 完整的 UTF-8 编码支持，无乱码问题
+- ✅ **文本转图片**: 基于 Qwen-Image 大模型生成高质量图片
+- ✅ **数据管理**: PostgreSQL 存储所有生成记录
+- ✅ **实时进度**: 显示生成进度条和累计耗时
+- ✅ **自定义输出**: 可指定图片输出目录
+- ✅ **搜索筛选**: 支持关键字和时间范围搜索
+- ✅ **多格式导出**: Excel, HTML, TXT, Markdown
+- ✅ **一键下载**: 方便的图片下载功能
 
 ### 界面特性
-- 🎨 现代化 UI 设计，渐变色主题
-- 📊 实时统计信息展示
-- 🔍 关键字和时间范围搜索
-- 📥 视频和音频文件下载链接
-- 📱 响应式设计，支持移动端
+- 🎨 美观的 Gradio 界面
+- 📊 数据表格展示
+- 🔍 强大的搜索功能
+- 📤 多格式导出
+- ⚡ 实时进度反馈
 
 ## 🚀 快速开始
 
-### 前置要求
+### 环境要求
 
-1. **Node.js** (v14 或更高版本)
-2. **PostgreSQL** (v12 或更高版本)
-3. **yt-dlp** (必须预先安装)
-
-#### 安装 yt-dlp (macOS)
-
-```bash
-# 使用 Homebrew 安装
-brew install yt-dlp
-
-# 或使用 pip 安装
-pip3 install yt-dlp
-
-# 验证安装
-yt-dlp --version
-```
+- **Python**: 3.8+
+- **PostgreSQL**: 12+
+- **系统**: macOS / Linux (已在 macOS Tahoe 26 测试)
+- **硬件**: 建议 16GB+ 内存
 
 ### 安装步骤
 
-1. **克隆项目**
+#### 方式一：一键安装（推荐）
+
 ```bash
-git clone <repository-url>
-cd youtube-video-downloader
+# 运行安装脚本
+./setup.sh
 ```
 
-2. **安装依赖**
+#### 方式二：手动安装
+
 ```bash
-npm install
-```
+# 1. 创建虚拟环境（推荐）
+python3 -m venv venv
+source venv/bin/activate
 
-3. **配置数据库**
+# 2. 安装依赖
+pip install -r requirements.txt
 
-创建 PostgreSQL 数据库:
-```bash
-psql -U postgres
-CREATE DATABASE youtube_downloader;
-\q
-```
-
-4. **配置环境变量**
-
-复制 `.env.example` 到 `.env` 并修改配置:
-```bash
+# 3. 配置环境变量
 cp .env.example .env
+nano .env  # 编辑配置
+
+# 4. 创建数据库
+psql -U postgres -c "CREATE DATABASE text2image_db;"
+psql -U postgres -d text2image_db -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+
+# 5. 初始化数据库表
+python3 database/init_db.py
+
+# 6. 创建输出目录
+mkdir -p outputs exports
 ```
 
-编辑 `.env` 文件，设置数据库连接信息:
+### 配置说明
+
+编辑 `.env` 文件：
+
 ```env
+# 数据库配置（必须）
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=youtube_downloader
+DB_NAME=text2image_db
 DB_USER=postgres
 DB_PASSWORD=your_password
+
+# HuggingFace 缓存目录（重要！）
+HF_HOME=/Volumes/Mont125 - Données/Users/seigneur/.cache/tahoe26/huggingface
+
+# 图片输出目录
+DEFAULT_OUTPUT_DIR=./outputs
+
+# 模型配置
+MODEL_NAME=Qwen/Qwen-Image
+TORCH_DTYPE=bfloat16
+DEVICE=cpu
+
+# 生成参数
+DEFAULT_NUM_INFERENCE_STEPS=28
+DEFAULT_GUIDANCE_SCALE=7.5
 ```
 
-5. **初始化数据库**
+### 启动应用
+
 ```bash
-npm run init-db
+# 激活虚拟环境（如果使用）
+source venv/bin/activate
+
+# 启动应用
+python3 app.py
 ```
 
-6. **启动服务器**
-```bash
-npm start
+访问: **http://localhost:7860**
+
+## 📖 使用指南
+
+### 1. 生成图片
+
+1. **输入文本描述**
+   ```
+   例如：一个穿着'QWEN' T恤的中国美女，手持黑马克笔微笑，
+   身后玻璃板上手写：'Qwen-Image 的未来：赋能内容创作'
+   ```
+
+2. **调整参数**（可选）
+   - **推理步数**: 20-35 推荐（默认 28）
+   - **引导比例**: 5-10 推荐（默认 7.5）
+   - **输出目录**: 自定义或使用默认
+
+3. **点击"生成图片"**
+   - 观察实时进度
+   - 等待生成完成
+
+4. **下载图片**
+   - 点击下载按钮保存图片
+
+### 2. 搜索和管理
+
+**关键字搜索**
+```
+输入关键字 → 点击"搜索"
 ```
 
-服务器将运行在 `http://localhost:3000`
-
-## 📖 使用说明
-
-### 1. 批量下载视频
-
-1. 打开浏览器访问 `http://localhost:3000`
-2. 在 "YouTube 视频地址列表" 输入框中，每行输入一个视频 URL
-3. 选择视频格式和质量
-4. 勾选 "同时下载音频" 并选择音频格式（如需要）
-5. 点击 "开始下载" 按钮
-
-### 2. 监控下载进度
-
-下载开始后，进度区域会自动显示：
-- 实时进度条
-- 下载速度
-- 预计剩余时间
-- 批次总体进度
-
-### 3. 搜索和筛选
-
-使用搜索功能查找已下载的视频：
-- 输入关键字搜索标题或文件名
-- 选择日期范围筛选
-- 点击 "搜索" 或 "重置"
-
-### 4. 导出数据
-
-点击导出按钮，选择格式：
-- **HTML**: 网页格式，可在浏览器中查看
-- **Markdown**: Markdown 文档格式
-- **PDF**: PDF 文档格式
-- **PNG**: 截图格式
-
-### 5. 下载文件
-
-在视频列表中，点击对应的 "视频" 或 "音频" 按钮即可下载文件。
-
-## 🔔 通知配置
-
-本项目支持四种通知渠道，在 `.env` 文件中配置：
-
-```env
-# WxPusher (微信推送)
-WXPUSHER_TOKEN=your_token
-WXPUSHER_UID=your_uid
-
-# PushPlus
-PUSHPLUS_TOKEN=your_token
-
-# Resend Email
-RESEND_API_KEY=your_api_key
-RESEND_TO_EMAIL=your_email
-
-# Telegram
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_CHAT_ID=your_chat_id
+**日期范围搜索**
+```
+开始日期: 2024-01-01
+结束日期: 2024-12-31
+点击"搜索"
 ```
 
-下载完成后，系统会自动发送通知到配置的所有渠道。
+**刷新列表**
+```
+点击"刷新"按钮
+```
 
-## ⚙️ 配置选项
+### 3. 导出数据
 
-### 环境变量
-
-| 变量 | 说明 | 默认值 |
-|-----|------|--------|
-| `PORT` | 服务器端口 | 3000 |
-| `DOWNLOAD_DIR` | 下载目录 | ./downloads |
-| `MAX_CONCURRENT_DOWNLOADS` | 最大并发下载数 | 3 |
-| `DB_HOST` | 数据库主机 | localhost |
-| `DB_PORT` | 数据库端口 | 5432 |
-| `DB_NAME` | 数据库名称 | youtube_downloader |
-| `DB_USER` | 数据库用户 | postgres |
-| `DB_PASSWORD` | 数据库密码 | postgres |
-
-### 支持的格式
-
-**视频格式:**
-- MP4 (推荐)
-- MKV
-- WebM
-
-**音频格式:**
-- MP3 (推荐)
-- AAC
-- WAV
-- M4A
-
-**视频质量:**
-- 最佳质量
-- 1080p
-- 720p
-- 480p
+1. 选择导出格式：Excel / HTML / TXT / Markdown
+2. （可选）设置搜索条件筛选数据
+3. 点击"导出"按钮
+4. 下载生成的文件
 
 ## 📁 项目结构
 
 ```
-youtube-video-downloader/
-├── db/
-│   ├── init.js           # 数据库初始化脚本
-│   └── database.js       # 数据库操作模块
-├── services/
-│   ├── downloader.js     # 下载服务模块
-│   ├── export.js         # 导出服务模块
-│   └── notificationAdapter.js  # 通知适配器
-├── public/
-│   ├── index.html        # 前端页面
-│   ├── styles.css        # 样式文件
-│   └── app.js            # 前端逻辑
-├── downloads/            # 下载文件目录
-│   ├── videos/           # 视频文件
-│   └── audio/            # 音频文件
-├── notification.js       # 通知服务模块
-├── server.js             # 主服务器
-├── package.json          # 项目配置
-├── .env                  # 环境变量
-└── README.md             # 说明文档
+text2image-generator/
+├── app.py                      # Gradio 主应用
+├── text2image_generator.py     # 图片生成器
+├── export_manager.py           # 导出管理器
+├── requirements.txt            # Python 依赖
+├── .env                        # 环境配置
+├── .env.example                # 配置模板
+├── setup.sh                    # 安装脚本
+├── README.md                   # 使用文档
+│
+├── database/                   # 数据库模块
+│   ├── init_db.py             # 数据库初始化
+│   └── db_manager.py          # 数据库管理
+│
+├── outputs/                    # 生成的图片
+└── exports/                    # 导出的文件
 ```
 
-## 🔧 API 接口
+## 🎯 核心代码说明
 
-### GET /api/videos
-获取视频列表
+### 基于原始 text2image.py
 
-**查询参数:**
-- `keyword`: 搜索关键字
-- `startDate`: 开始日期
-- `endDate`: 结束日期
-- `limit`: 返回数量限制
+原始代码：
+```python
+import os
+os.environ['HF_HOME'] = "/path/to/huggingface"
 
-### POST /api/download
-批量下载视频
+from diffusers import QwenImagePipeline
+import torch
 
-**请求体:**
-```json
-{
-  "urls": ["url1", "url2"],
-  "videoFormat": "mp4",
-  "audioFormat": "mp3",
-  "downloadAudio": true,
-  "quality": "best"
-}
+pipe = QwenImagePipeline.from_pretrained("Qwen/Qwen-Image", torch_dtype=torch.bfloat16)
+pipe.to("cpu")
+prompt = "一个穿着'QWEN' T恤的中国美女..."
+image = pipe(prompt, num_inference_steps=28, guidance_scale=7.5).images[0]
+image.save("qwen_image_output.png")
 ```
 
-### POST /api/export
-导出视频列表
+### 增强功能
 
-**请求体:**
-```json
-{
-  "format": "html|pdf|markdown|png",
-  "filters": {
-    "keyword": "搜索词",
-    "startDate": "2023-01-01",
-    "endDate": "2023-12-31"
-  }
-}
+1. **封装为类** (`text2image_generator.py`)
+   - 单例模式管理 Pipeline
+   - 支持进度回调
+   - 自动保存和管理文件
+
+2. **数据库集成** (`database/`)
+   - 自动保存生成记录
+   - 支持搜索和筛选
+   - 完整的 CRUD 操作
+
+3. **Gradio 界面** (`app.py`)
+   - 直观的 Web UI
+   - 实时进度显示
+   - 多格式导出
+
+## 🔧 参数说明
+
+### 推理步数 (num_inference_steps)
+
+- **范围**: 10-50
+- **推荐**: 28
+- **说明**: 步数越多，图片质量越高，但耗时越长
+
+### 引导比例 (guidance_scale)
+
+- **范围**: 1.0-15.0
+- **推荐**: 7.5
+- **说明**: 控制生成与文本描述的相关性，越高越贴合描述
+
+### 设备选择 (DEVICE)
+
+- **CPU**: 稳定但较慢，适合测试
+- **MPS** (Apple Silicon): 推荐用于 M1/M2/M3 Mac
+- **CUDA**: 需要 NVIDIA GPU
+
+## 📊 数据库表结构
+
+```sql
+generated_images 表:
+  - id: 主键
+  - prompt: 文本提示词
+  - image_path: 图片路径
+  - image_size: 文件大小
+  - num_inference_steps: 推理步数
+  - guidance_scale: 引导比例
+  - generation_time: 生成耗时
+  - created_at: 创建时间
 ```
 
-### GET /api/statistics
-获取统计信息
+## 🐛 常见问题
 
-### DELETE /api/videos/:id
-删除视频记录和文件
+### Q: 模型下载失败
 
-### GET /api/queue-status
-获取下载队列状态
-
-## 🐛 故障排除
-
-### 1. yt-dlp 未找到
-```bash
-# 确认 yt-dlp 已安装
-which yt-dlp
-
-# 如果未安装，使用 Homebrew 安装
-brew install yt-dlp
-```
-
-### 2. 数据库连接失败
-- 检查 PostgreSQL 是否运行: `pg_isready`
-- 检查 `.env` 中的数据库配置是否正确
-- 确认数据库已创建: `psql -U postgres -l`
-
-### 3. 下载失败
-- 检查网络连接
-- 确认视频 URL 有效
-- 检查 yt-dlp 版本: `yt-dlp --version`
-- 更新 yt-dlp: `brew upgrade yt-dlp`
-
-### 4. 中文乱码
-- 确认数据库编码为 UTF-8
-- 检查终端支持 UTF-8
-- 浏览器设置为 UTF-8 编码
-
-## 📝 开发说明
-
-### 开发模式
+**A:** 检查 HF_HOME 路径是否正确，确保有足够的磁盘空间（约 10GB）
 
 ```bash
-npm run dev
+# 检查磁盘空间
+df -h /Volumes/Mont125\ -\ Données/
 ```
 
-使用 nodemon 自动重启服务器。
+### Q: 数据库连接失败
 
-### 数据库管理
+**A:** 确保 PostgreSQL 正在运行
 
 ```bash
-# 重新初始化数据库
-npm run init-db
+# macOS
+brew services start postgresql
 
-# 连接到数据库
-psql -U postgres -d youtube_downloader
+# 检查状态
+brew services list | grep postgresql
 ```
+
+### Q: 生成速度慢
+
+**A:** 
+1. 如果是 M1/M2/M3 Mac，可以尝试使用 MPS 设备：
+   ```env
+   DEVICE=mps
+   ```
+2. 减少推理步数（20-25）
+3. 关闭其他占用内存的程序
+
+### Q: 中文显示乱码
+
+**A:** 确保终端和浏览器都设置为 UTF-8 编码
+
+## 🎨 使用示例
+
+### 示例 1: 生成人物图片
+
+```
+提示词: 一位优雅的中国女性，穿着传统旗袍，在古典园林中漫步，
+        背景是精致的亭台楼阁和盛开的梅花
+参数: 步数=30, 引导=8.0
+```
+
+### 示例 2: 生成风景图片
+
+```
+提示词: 壮丽的黄山日出，云海翻涌，奇松怪石，金色阳光穿透云层，
+        仙境般的景象
+参数: 步数=28, 引导=7.5
+```
+
+### 示例 3: 生成创意图片
+
+```
+提示词: 赛博朋克风格的未来城市，霓虹灯闪烁，飞行汽车穿梭，
+        高楼大厦耸立，细雨蒙蒙的夜晚
+参数: 步数=35, 引导=9.0
+```
+
+## 📝 导出格式说明
+
+### Excel (.xlsx)
+- 适合数据分析
+- 可用 Excel/WPS 打开
+- 包含所有字段
+
+### HTML (.html)
+- 精美的网页报告
+- 可直接在浏览器查看
+- 支持打印
+
+### TXT (.txt)
+- 纯文本格式
+- 通用性最好
+- 适合存档
+
+### Markdown (.md)
+- Markdown 文档格式
+- 适合技术文档
+- 可转换为其他格式
+
+## 🔐 安全建议
+
+1. **修改数据库密码**: 不要使用默认密码
+2. **本地使用**: 不建议在公网暴露
+3. **定期备份**: 备份数据库和生成的图片
+4. **版权注意**: 生成的图片版权归您所有，但请合理使用
 
 ## 🤝 贡献
 
@@ -317,14 +344,17 @@ MIT License
 
 ## 🙏 致谢
 
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - YouTube 下载工具
-- [Express](https://expressjs.com/) - Web 框架
-- [PostgreSQL](https://www.postgresql.org/) - 数据库
-- [ws](https://github.com/websockets/ws) - WebSocket 库
-- [Puppeteer](https://pptr.dev/) - 无头浏览器
+- [Qwen-Image](https://huggingface.co/Qwen/Qwen-Image) - 强大的文本转图片模型
+- [Gradio](https://gradio.app/) - 简单易用的 ML 界面框架
+- [PostgreSQL](https://www.postgresql.org/) - 可靠的数据库
+- [Diffusers](https://github.com/huggingface/diffusers) - Hugging Face 扩散模型库
 
 ## 📧 联系方式
 
 如有问题或建议，请通过以下方式联系：
-- Email: seigneurtsui@goallez.dpdns.org
-- GitHub Issues: 在项目仓库提交 Issue
+- GitHub Issues
+- Email: your-email@example.com
+
+---
+
+**Enjoy creating amazing images with AI! 🎨**
