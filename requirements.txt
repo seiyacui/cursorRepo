@@ -1,0 +1,28 @@
+# Text-to-Image Generator with Gradio
+# Python 依赖包
+
+# Gradio UI
+gradio>=4.0.0
+
+# AI Model
+diffusers>=0.25.0
+transformers>=4.35.0
+torch>=2.0.0
+accelerate>=0.24.0
+
+# Database
+psycopg2-binary>=2.9.9
+sqlalchemy>=2.0.0
+
+# Image Processing
+Pillow>=10.0.0
+
+# Export Formats
+openpyxl>=3.1.2
+pandas>=2.1.0
+markdown>=3.5.0
+
+# Utilities
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+requests>=2.31.0

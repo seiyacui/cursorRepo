@@ -21,9 +21,20 @@ exports/
 *.jpg
 *.jpeg
 *.xlsx
-*.html
-*.txt
-*.md
+
+# 排除导出的 HTML/TXT/MD 文件，但保留项目文档
+exports/*.html
+exports/*.txt
+exports/*.md
+
+# 保留重要的项目文件
+!requirements.txt
+!README.md
+!QUICKSTART.md
+!WELCOME.md
+!PROJECT_SUMMARY.md
+!TESTING_GUIDE.md
+!PROJECT_DELIVERY.txt
 
 # 数据库
 *.db
