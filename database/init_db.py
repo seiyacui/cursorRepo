@@ -2,8 +2,8 @@
 数据库初始化脚本
 """
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Text, BigInteger, DateTime
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine, Column, Integer, String, Text, BigInteger, DateTime, text
+from sqlalchemy.orm import declarative_base  # 修复 SQLAlchemy 2.0 警告
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from dotenv import load_dotenv
@@ -36,18 +36,46 @@ def init_database():
     try:
         engine = create_engine(DATABASE_URL, echo=True)
         
+        # 尝试创建 pg_trgm 扩展（用于全文搜索）
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))
+                conn.commit()
+                print("✅ pg_trgm 扩展已启用")
+        except Exception as ext_error:
+            print(f"⚠️  无法创建 pg_trgm 扩展: {ext_error}")
+            print("   将使用简单索引代替 GIN 索引")
+        
         # 创建所有表
         Base.metadata.create_all(engine)
         
         print("✅ 数据库表创建成功！")
         
         # 创建索引
-        from sqlalchemy import Index
-        Index('idx_created_at', GeneratedImage.created_at).create(engine, checkfirst=True)
-        Index('idx_prompt', GeneratedImage.prompt, postgresql_using='gin', 
-              postgresql_ops={'prompt': 'gin_trgm_ops'}).create(engine, checkfirst=True)
+        from sqlalchemy import Index, text
         
-        print("✅ 索引创建成功！")
+        # 创建日期索引
+        Index('idx_created_at', GeneratedImage.created_at).create(engine, checkfirst=True)
+        print("✅ 创建索引: idx_created_at")
+        
+        # 尝试创建 GIN 索引用于全文搜索
+        try:
+            Index('idx_prompt', GeneratedImage.prompt, postgresql_using='gin', 
+                  postgresql_ops={'prompt': 'gin_trgm_ops'}).create(engine, checkfirst=True)
+            print("✅ 创建 GIN 索引: idx_prompt")
+        except Exception as idx_error:
+            print(f"⚠️  无法创建 GIN 索引: {idx_error}")
+            print("   使用简单索引代替...")
+            # 使用简单的 B-tree 索引
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_prompt_simple ON generated_images(prompt);"))
+                    conn.commit()
+                print("✅ 创建简单索引: idx_prompt_simple")
+            except Exception as simple_idx_error:
+                print(f"⚠️  创建简单索引失败: {simple_idx_error}")
+        
+        print("✅ 索引创建完成！")
         
     except Exception as e:
         print(f"❌ 数据库初始化失败: {e}")
