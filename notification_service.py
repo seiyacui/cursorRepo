@@ -7,6 +7,7 @@ import json
 import os
 from datetime import datetime
 from dotenv import load_dotenv
+from notification_config import notification_config
 
 load_dotenv()
 
@@ -156,6 +157,11 @@ class NotificationService:
     def _send_to_all_channels(self, title, content, html_content):
         """发送通知到所有渠道"""
         
+        # 检查总开关
+        if not notification_config.is_enabled():
+            print("🔕 通知总开关已关闭，跳过发送")
+            return [{'name': 'All', 'status': 'disabled', 'reason': '总开关已关闭'}]
+        
         # 准备通知配置
         notifications = [
             {
@@ -169,7 +175,8 @@ class NotificationService:
                     "contentType": 3,  # Markdown
                     "uids": [self.config['wxpusher']['uid']],
                 },
-                'enabled': bool(self.config['wxpusher']['token'] and self.config['wxpusher']['uid'])
+                'enabled': (bool(self.config['wxpusher']['token'] and self.config['wxpusher']['uid']) 
+                           and notification_config.is_channel_enabled('wxpusher'))
             },
             {
                 'name': 'PushPlus',
@@ -181,7 +188,8 @@ class NotificationService:
                     "content": content,
                     "template": "markdown",
                 },
-                'enabled': bool(self.config['pushplus']['token'])
+                'enabled': (bool(self.config['pushplus']['token']) 
+                           and notification_config.is_channel_enabled('pushplus'))
             },
             {
                 'name': 'Resend Email',
@@ -196,7 +204,8 @@ class NotificationService:
                     "subject": title,
                     "html": html_content,
                 },
-                'enabled': bool(self.config['resend']['api_key'] and self.config['resend']['to_email'])
+                'enabled': (bool(self.config['resend']['api_key'] and self.config['resend']['to_email']) 
+                           and notification_config.is_channel_enabled('resend'))
             },
             {
                 'name': 'Telegram',
@@ -207,7 +216,8 @@ class NotificationService:
                     "text": content.replace('###', '').replace('**', '*'),
                     "parse_mode": "Markdown"
                 },
-                'enabled': bool(self.config['telegram']['bot_token'] and self.config['telegram']['chat_id'])
+                'enabled': (bool(self.config['telegram']['bot_token'] and self.config['telegram']['chat_id']) 
+                           and notification_config.is_channel_enabled('telegram'))
             },
         ]
         

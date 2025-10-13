@@ -11,6 +11,7 @@ from text2image_generator import Text2ImageGenerator
 from database.db_manager import DatabaseManager
 from export_manager import ExportManager
 from notification_service import notification_service
+from notification_config import notification_config
 
 load_dotenv()
 
@@ -86,9 +87,8 @@ def generate_image_ui(prompt, output_dir, num_steps, guidance, progress=gr.Progr
 📈 引导比例: {result['guidance_scale']}
 """
         
-        # 发送通知
-        enable_notifications = os.getenv('ENABLE_NOTIFICATIONS', 'true').lower() == 'true'
-        if enable_notifications:
+        # 发送通知（使用配置文件中的设置）
+        if notification_config.is_enabled():
             try:
                 print("📢 准备发送通知...")
                 notification_service.send_image_generation_notification(result)
@@ -190,6 +190,50 @@ def load_model_ui(progress=gr.Progress()):
         return "✅ 模型加载成功！现在可以开始生成图片了。"
     except Exception as e:
         return f"❌ 模型加载失败: {str(e)}"
+
+def get_notification_status_display():
+    """获取通知状态显示文本"""
+    config = notification_config.load_config()
+    
+    master_status = "🟢 已启用" if config.get('enabled', True) else "🔴 已禁用"
+    
+    channels_status = []
+    channel_names = {
+        'wxpusher': 'WxPusher',
+        'pushplus': 'PushPlus',
+        'resend': 'Resend Email',
+        'telegram': 'Telegram'
+    }
+    
+    for channel, name in channel_names.items():
+        enabled = config.get('channels', {}).get(channel, True)
+        if config.get('enabled', True) and enabled:
+            status = "🟢"
+        elif config.get('enabled', True) and not enabled:
+            status = "🟡"
+        else:
+            status = "🔴"
+        channels_status.append(f"{status} {name}")
+    
+    enabled_count = sum(1 for ch in config.get('channels', {}).values() if ch)
+    
+    status_text = f"""
+### 总开关状态
+{master_status}
+
+### 渠道状态
+{chr(10).join(channels_status)}
+
+### 统计
+- 已启用渠道: {enabled_count}/4
+- 总开关: {'开启' if config.get('enabled', True) else '关闭'}
+
+### 图例
+- 🟢 已启用并生效
+- 🟡 已禁用（总开关开启）
+- 🔴 不可用（总开关关闭）
+"""
+    return status_text
 
 # 创建 Gradio 界面
 with gr.Blocks(
@@ -333,55 +377,124 @@ with gr.Blocks(
         export_status = gr.Textbox(label="导出状态")
     
     with gr.Tab("🔔 通知设置"):
-        gr.Markdown("### 📢 通知配置")
+        gr.Markdown("### 📢 通知开关控制")
         
-        gr.Markdown(
-            """
-            系统支持4种通知渠道，在图片生成完成后自动发送通知：
+        # 加载当前配置
+        current_config = notification_config.load_config()
+        
+        with gr.Row():
+            with gr.Column(scale=1):
+                gr.Markdown("#### 🎛️ 总开关")
+                
+                notification_master_switch = gr.Checkbox(
+                    label="启用通知",
+                    value=current_config.get('enabled', True),
+                    info="关闭后将禁用所有通知渠道",
+                    interactive=True
+                )
+                
+                gr.Markdown("---")
+                gr.Markdown("#### 📡 渠道开关")
+                gr.Markdown("*需先启用总开关才能生效*")
+                
+                wxpusher_switch = gr.Checkbox(
+                    label="WxPusher（微信推送）",
+                    value=current_config.get('channels', {}).get('wxpusher', True),
+                    interactive=True
+                )
+                
+                pushplus_switch = gr.Checkbox(
+                    label="PushPlus（微信推送）",
+                    value=current_config.get('channels', {}).get('pushplus', True),
+                    interactive=True
+                )
+                
+                resend_switch = gr.Checkbox(
+                    label="Resend Email（邮件通知）",
+                    value=current_config.get('channels', {}).get('resend', True),
+                    interactive=True
+                )
+                
+                telegram_switch = gr.Checkbox(
+                    label="Telegram（Telegram机器人）",
+                    value=current_config.get('channels', {}).get('telegram', True),
+                    interactive=True
+                )
+                
+                with gr.Row():
+                    save_notification_btn = gr.Button(
+                        "💾 保存设置",
+                        variant="primary",
+                        size="lg"
+                    )
+                    
+                notification_status = gr.Textbox(
+                    label="保存状态",
+                    interactive=False,
+                    lines=2
+                )
             
-            1. **WxPusher** - 微信推送
-            2. **PushPlus** - 微信推送
-            3. **Resend Email** - 邮件通知
-            4. **Telegram** - Telegram 机器人
-            
-            ### 📝 配置方法
-            
-            编辑 `.env` 文件，配置通知凭证：
-            
-            ```env
-            # WxPusher
-            WXPUSHER_TOKEN=your_token
-            WXPUSHER_UID=your_uid
-            
-            # PushPlus
-            PUSHPLUS_TOKEN=your_token
-            
-            # Resend Email
-            RESEND_API_KEY=your_api_key
-            RESEND_TO_EMAIL=your_email
-            
-            # Telegram
-            TELEGRAM_BOT_TOKEN=your_bot_token
-            TELEGRAM_CHAT_ID=your_chat_id
-            
-            # 启用/禁用通知
-            ENABLE_NOTIFICATIONS=true
-            ```
-            
-            ### 🔗 获取凭证
-            
-            - **WxPusher**: https://wxpusher.zjiecode.com/
-            - **PushPlus**: http://www.pushplus.plus/
-            - **Resend**: https://resend.com/
-            - **Telegram**: 创建 Bot 获取 Token
-            
-            ### 💡 提示
-            
-            - 至少配置一个渠道即可
-            - 未配置的渠道会自动跳过
-            - 通知失败不影响图片生成
-            - 可以设置 `ENABLE_NOTIFICATIONS=false` 禁用所有通知
-            """
+            with gr.Column(scale=1):
+                gr.Markdown("#### 📋 当前状态")
+                
+                notification_status_display = gr.Markdown(
+                    value=get_notification_status_display()
+                )
+                
+                gr.Markdown("---")
+                gr.Markdown("#### 📝 配置说明")
+                
+                gr.Markdown(
+                    """
+                    **使用步骤：**
+                    
+                    1. **配置凭证** - 编辑 `.env` 文件，添加各渠道的凭证：
+                       ```
+                       WXPUSHER_TOKEN=your_token
+                       WXPUSHER_UID=your_uid
+                       PUSHPLUS_TOKEN=your_token
+                       RESEND_API_KEY=your_api_key
+                       RESEND_TO_EMAIL=your_email
+                       TELEGRAM_BOT_TOKEN=your_bot_token
+                       TELEGRAM_CHAT_ID=your_chat_id
+                       ```
+                    
+                    2. **控制开关** - 使用上方开关控制通知：
+                       - **总开关**：关闭后禁用所有通知
+                       - **渠道开关**：精细控制每个渠道
+                    
+                    3. **保存设置** - 点击"保存设置"按钮应用更改
+                    
+                    **获取凭证：**
+                    - [WxPusher](https://wxpusher.zjiecode.com/)
+                    - [PushPlus](http://www.pushplus.plus/)
+                    - [Resend](https://resend.com/)
+                    - [Telegram](https://t.me/BotFather) - 创建Bot
+                    
+                    **提示：**
+                    - 至少配置一个渠道即可
+                    - 未配置的渠道会自动跳过
+                    - 通知失败不影响图片生成
+                    - 设置实时生效，无需重启
+                    """
+                )
+        
+        # 保存通知设置
+        def save_notification_settings(master, wx, pp, rs, tg):
+            success, message = notification_config.save_config(master, wx, pp, rs, tg)
+            status_display = get_notification_status_display()
+            return message, status_display
+        
+        save_notification_btn.click(
+            fn=save_notification_settings,
+            inputs=[
+                notification_master_switch,
+                wxpusher_switch,
+                pushplus_switch,
+                resend_switch,
+                telegram_switch
+            ],
+            outputs=[notification_status, notification_status_display]
         )
     
     with gr.Tab("ℹ️ 使用说明"):
