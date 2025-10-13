@@ -29,6 +29,7 @@ class ExportManager:
                 'ID': img.id,
                 '文本内容': img.prompt,
                 '图片路径': img.image_path,
+                '图片尺寸': img.image_dimensions or '未知',
                 '图片大小': ExportManager.format_size(img.image_size),
                 '推理步数': img.num_inference_steps,
                 '引导比例': img.guidance_scale,

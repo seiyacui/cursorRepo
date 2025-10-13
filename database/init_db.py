@@ -23,6 +23,7 @@ class GeneratedImage(Base):
     prompt = Column(Text, nullable=False, comment='文本提示词')
     image_path = Column(String(500), nullable=False, comment='图片路径')
     image_size = Column(BigInteger, comment='图片大小（字节）')
+    image_dimensions = Column(String(50), comment='图片尺寸（宽x高）')
     num_inference_steps = Column(Integer, comment='推理步数')
     guidance_scale = Column(String(20), comment='引导比例')
     generation_time = Column(String(50), comment='生成耗时')

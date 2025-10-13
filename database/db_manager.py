@@ -19,14 +19,15 @@ class DatabaseManager:
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
     
-    def add_image(self, prompt, image_path, image_size, num_inference_steps, 
-                  guidance_scale, generation_time):
+    def add_image(self, prompt, image_path, image_size, image_dimensions, 
+                  num_inference_steps, guidance_scale, generation_time):
         """添加图片记录"""
         try:
             new_image = GeneratedImage(
                 prompt=prompt,
                 image_path=image_path,
                 image_size=image_size,
+                image_dimensions=image_dimensions,
                 num_inference_steps=num_inference_steps,
                 guidance_scale=str(guidance_scale),
                 generation_time=generation_time

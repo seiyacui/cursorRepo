@@ -124,8 +124,10 @@ class Text2ImageGenerator:
             # 保存图片
             image.save(filepath)
             
-            # 获取文件大小
+            # 获取文件大小和图片尺寸
             file_size = os.path.getsize(filepath)
+            image_width, image_height = image.size
+            image_dimensions = f"{image_width}x{image_height}"
             
             # 计算耗时
             elapsed_time = time.time() - start_time
@@ -138,6 +140,7 @@ class Text2ImageGenerator:
                 'image_path': filepath,
                 'filename': filename,
                 'file_size': file_size,
+                'image_dimensions': image_dimensions,
                 'generation_time': f"{elapsed_time:.2f}秒",
                 'elapsed_seconds': elapsed_time,
                 'num_inference_steps': num_inference_steps,
@@ -147,6 +150,7 @@ class Text2ImageGenerator:
             
             print(f"✅ 图片生成成功！")
             print(f"   路径: {filepath}")
+            print(f"   尺寸: {image_dimensions}")
             print(f"   大小: {self._format_size(file_size)}")
             print(f"   耗时: {elapsed_time:.2f}秒")
             

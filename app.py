@@ -81,6 +81,7 @@ def generate_image_ui(prompt, output_dir, num_steps, guidance, progress=gr.Progr
 ✅ 图片生成成功！
 
 📁 文件路径: {result['image_path']}
+📐 图片尺寸: {result['image_dimensions']}
 📊 文件大小: {format_size(result['file_size'])}
 ⏱️  生成耗时: {result['generation_time']}
 🔢 推理步数: {result['num_inference_steps']}
@@ -127,6 +128,7 @@ def refresh_table(keyword="", start_date=None, end_date=None):
                 img.id,
                 img.prompt[:100] + "..." if len(img.prompt) > 100 else img.prompt,
                 os.path.basename(img.image_path),
+                img.image_dimensions or "未知",
                 format_size(img.image_size),
                 img.generation_time,
                 img.created_at.strftime('%Y-%m-%d %H:%M:%S') if img.created_at else ""
@@ -355,10 +357,10 @@ with gr.Blocks(
         gr.Markdown("### 📋 生成记录列表")
         
         table_output = gr.Dataframe(
-            headers=["ID", "文本内容", "图片文件名", "文件大小", "生成耗时", "创建时间"],
-            datatype=["number", "str", "str", "str", "str", "str"],
+            headers=["ID", "文本内容", "图片文件名", "图片尺寸", "文件大小", "生成耗时", "创建时间"],
+            datatype=["number", "str", "str", "str", "str", "str", "str"],
             row_count=10,
-            col_count=(6, "fixed"),
+            col_count=(7, "fixed"),
             wrap=True
         )
         
