@@ -1,81 +1,163 @@
-# Dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Downloads directory
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
 downloads/
-exports/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Logs
-logs/
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
 *.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
 
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
+# Flask stuff:
+instance/
+.webassets-cache
 
-# Coverage directory used by tools like istanbul
-coverage/
+# Scrapy stuff:
+.scrapy
 
-# nyc test coverage
-.nyc_output/
+# Sphinx documentation
+docs/_build/
 
-# Dependency directories
-node_modules/
-jspm_packages/
+# PyBuilder
+target/
 
-# Optional npm cache directory
-.npm
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# Optional REPL history
-.node_repl_history
+# IPython
+profile_default/
+ipython_config.py
 
-# Output of 'npm pack'
-*.tgz
+# pyenv
+.python-version
 
-# Yarn Integrity file
-.yarn-integrity
+# pipenv
+Pipfile.lock
 
-# dotenv environment variables file
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
 .env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# next.js build output
-.next
+# Spyder project settings
+.spyderproject
+.spyproject
 
-# Nuxt.js build output
-.nuxt
+# Rope project settings
+.ropeproject
 
-# vuepress build output
-.vuepress/dist
+# mkdocs documentation
+/site
 
-# Serverless directories
-.serverless
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
-# FuseBox cache
-.fusebox/
+# Pyre type checker
+.pyre/
 
-# DynamoDB Local files
-.dynamodb/
+# 项目特定文件
+# 生成的图片
+static/images/*.png
+static/images/*.jpg
+static/images/*.jpeg
+static/images/*.webp
 
-# IDE files
+# 导出的文件
+exports/*.xlsx
+exports/*.html
+exports/*.txt
+exports/*.md
+exports/*.pdf
+
+# 日志文件
+logs/*.log
+
+# 数据库备份
+*.sql.backup
+*.dump
+
+# 模型缓存（保留目录结构）
+models/cache/
+.cache/
+huggingface/
+
+# 临时文件
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE文件
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS generated files
+# 系统文件
 .DS_Store
 .DS_Store?
 ._*
@@ -84,56 +166,15 @@ jspm_packages/
 ehthumbs.db
 Thumbs.db
 
-# Temporary files
-tmp/
-temp/
+# 配置文件（包含敏感信息）
+.env
+config/local_settings.py
 
-# Database files
-*.sqlite
-*.sqlite3
-*.db
+# 测试文件
+test_*.py
+*_test.py
+tests/
 
-# Backup files
-*.bak
-*.backup
-
-# Archive files
-*.zip
-*.tar.gz
-*.rar
-
-# Video files (in case they're accidentally committed)
-*.mp4
-*.mkv
-*.webm
-*.avi
-*.mov
-*.wmv
-*.flv
-*.m4v
-
-# Audio files
-*.mp3
-*.aac
-*.wav
-*.flac
-*.ogg
-*.wma
-*.m4a
-
-# Image files (except small icons)
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.bmp
-*.tiff
-*.svg
-!public/favicon.ico
-!public/icons/
-
-# PDF files
-*.pdf
-
-# Generated documentation
+# 文档构建
 docs/build/
+site/
