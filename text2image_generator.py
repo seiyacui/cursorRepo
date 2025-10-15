@@ -9,8 +9,12 @@ from PIL import Image
 import time
 from datetime import datetime
 from dotenv import load_dotenv
+from logger_config import setup_logger, log_generation_start, log_generation_success, log_generation_error
 
 load_dotenv()
+
+# 设置日志记录器
+logger = setup_logger('Text2ImageGenerator', 'logs/generator.log')
 
 class Text2ImageGenerator:
     """文本转图片生成器类"""
@@ -101,6 +105,14 @@ class Text2ImageGenerator:
             
             start_time = time.time()
             
+            # 记录生成开始
+            params = {
+                '推理步数': num_inference_steps,
+                '引导比例': guidance_scale,
+                '输出目录': output_dir
+            }
+            log_generation_start(logger, prompt, params)
+            
             print(f"🎨 生成参数:")
             print(f"   提示词: {prompt}")
             print(f"   推理步数: {num_inference_steps}")
@@ -148,6 +160,9 @@ class Text2ImageGenerator:
                 'prompt': prompt
             }
             
+            # 记录生成成功
+            log_generation_success(logger, result)
+            
             print(f"✅ 图片生成成功！")
             print(f"   路径: {filepath}")
             print(f"   尺寸: {image_dimensions}")
@@ -157,6 +172,9 @@ class Text2ImageGenerator:
             return result
             
         except Exception as e:
+            # 记录生成失败
+            log_generation_error(logger, e)
+            
             error_msg = f"❌ 图片生成失败: {str(e)}"
             print(error_msg)
             if progress_callback:

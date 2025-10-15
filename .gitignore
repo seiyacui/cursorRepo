@@ -39,6 +39,10 @@ exports/*.md
 # 保留通知配置文件（运行时生成的用户配置）
 # notification_config.json 不提交，每个用户有自己的设置
 
+# 日志文件
+logs/
+*.log
+
 # 数据库
 *.db
 *.sqlite

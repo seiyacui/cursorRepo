@@ -12,8 +12,15 @@ from database.db_manager import DatabaseManager
 from export_manager import ExportManager
 from notification_service import notification_service
 from notification_config import notification_config
+from logger_config import (
+    setup_logger, log_section, log_separator, 
+    log_database_operation, log_notification_status
+)
 
 load_dotenv()
+
+# 设置日志记录器
+logger = setup_logger('Text2ImageApp', 'logs/app.log')
 
 # 全局变量
 generator = Text2ImageGenerator()
@@ -65,16 +72,19 @@ def generate_image_ui(prompt, output_dir, num_steps, guidance, progress=gr.Progr
         
         # 保存到数据库
         try:
-            db_manager.add_image(
+            record_id = db_manager.add_image(
                 prompt=result['prompt'],
                 image_path=result['image_path'],
                 image_size=result['file_size'],
+                image_dimensions=result['image_dimensions'],
                 num_inference_steps=result['num_inference_steps'],
                 guidance_scale=result['guidance_scale'],
                 generation_time=result['generation_time']
             )
+            log_database_operation(logger, '保存图片记录', True, f'记录ID: {record_id}')
         except Exception as db_error:
             print(f"⚠️  数据库保存失败: {db_error}")
+            log_database_operation(logger, '保存图片记录', False, str(db_error))
         
         # 返回结果
         success_msg = f"""
@@ -90,13 +100,19 @@ def generate_image_ui(prompt, output_dir, num_steps, guidance, progress=gr.Progr
         
         # 发送通知（使用配置文件中的设置）
         if notification_config.is_enabled():
+            enabled_channels = notification_config.get_enabled_channels()
+            log_notification_status(logger, True, enabled_channels)
             try:
                 print("📢 准备发送通知...")
                 notification_service.send_image_generation_notification(result)
                 success_msg += "\n🔔 通知已发送到配置的渠道"
+                logger.info(f"✅ 通知发送成功 - 渠道: {', '.join(enabled_channels)}")
             except Exception as notify_error:
                 print(f"⚠️  通知发送失败: {notify_error}")
                 success_msg += f"\n⚠️  通知发送失败: {str(notify_error)}"
+                logger.error(f"❌ 通知发送失败: {notify_error}")
+        else:
+            log_notification_status(logger, False, [])
         
         # 刷新列表
         table_data = refresh_table()
