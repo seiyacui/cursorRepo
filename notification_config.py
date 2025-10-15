@@ -13,15 +13,16 @@ class NotificationConfig:
     
     def __init__(self):
         self.config_path = Path(self.CONFIG_FILE)
-        self.default_config = {
-            'enabled': True,  # 总开关
-            'channels': {
-                'wxpusher': True,
-                'pushplus': True,
-                'resend': True,
-                'telegram': True
+            self.default_config = {
+                'enabled': True,  # 总开关
+                'channels': {
+                    'wxpusher': True,
+                    'pushplus': True,
+                    'resend': True,
+                    'telegram': True,
+                    'qq_email': True  # QQ邮箱
+                }
             }
-        }
     
     def load_config(self):
         """加载配置"""
@@ -40,7 +41,7 @@ class NotificationConfig:
                 return self.default_config.copy()
         return self.default_config.copy()
     
-    def save_config(self, enabled, wxpusher, pushplus, resend, telegram):
+    def save_config(self, enabled, wxpusher, pushplus, resend, telegram, qq_email):
         """
         保存配置
         
@@ -50,6 +51,7 @@ class NotificationConfig:
             pushplus: PushPlus 开关
             resend: Resend Email 开关
             telegram: Telegram 开关
+            qq_email: QQ Email 开关
         """
         config = {
             'enabled': enabled,
@@ -57,7 +59,8 @@ class NotificationConfig:
                 'wxpusher': wxpusher,
                 'pushplus': pushplus,
                 'resend': resend,
-                'telegram': telegram
+                'telegram': telegram,
+                'qq_email': qq_email
             }
         }
         

@@ -98,13 +98,14 @@ def generate_image_ui(prompt, output_dir, num_steps, guidance, progress=gr.Progr
 📈 引导比例: {result['guidance_scale']}
 """
         
-        # 发送通知（使用配置文件中的设置）
+        # 发送通知（使用配置文件中的设置，包括QQ邮箱）
         if notification_config.is_enabled():
             enabled_channels = notification_config.get_enabled_channels()
             log_notification_status(logger, True, enabled_channels)
             try:
                 print("📢 准备发送通知...")
-                notification_service.send_image_generation_notification(result)
+                # 使用新的方法发送通知（包括QQ邮箱）
+                notification_service.send_image_generation_notification_with_qq(result)
                 success_msg += "\n🔔 通知已发送到配置的渠道"
                 logger.info(f"✅ 通知发送成功 - 渠道: {', '.join(enabled_channels)}")
             except Exception as notify_error:
@@ -220,7 +221,8 @@ def get_notification_status_display():
         'wxpusher': 'WxPusher',
         'pushplus': 'PushPlus',
         'resend': 'Resend Email',
-        'telegram': 'Telegram'
+        'telegram': 'Telegram',
+        'qq_email': 'QQ Email'
     }
     
     for channel, name in channel_names.items():
@@ -439,6 +441,13 @@ with gr.Blocks(
                     interactive=True
                 )
                 
+                qq_email_switch = gr.Checkbox(
+                    label="QQ Email（QQ邮箱，支持多收件人）",
+                    value=current_config.get('channels', {}).get('qq_email', True),
+                    interactive=True,
+                    info="基于SMTP，支持同时发送给多个收件人"
+                )
+                
                 with gr.Row():
                     save_notification_btn = gr.Button(
                         "💾 保存设置",
@@ -475,6 +484,9 @@ with gr.Blocks(
                        RESEND_TO_EMAIL=your_email
                        TELEGRAM_BOT_TOKEN=your_bot_token
                        TELEGRAM_CHAT_ID=your_chat_id
+                       QQ_EMAIL_USER=your_qq_email@qq.com
+                       QQ_EMAIL_PASSWORD=your_authorization_code
+                       QQ_EMAIL_RECIPIENTS=email1@example.com,email2@gmail.com
                        ```
                     
                     2. **控制开关** - 使用上方开关控制通知：
@@ -498,8 +510,8 @@ with gr.Blocks(
                 )
         
         # 保存通知设置
-        def save_notification_settings(master, wx, pp, rs, tg):
-            success, message = notification_config.save_config(master, wx, pp, rs, tg)
+        def save_notification_settings(master, wx, pp, rs, tg, qq):
+            success, message = notification_config.save_config(master, wx, pp, rs, tg, qq)
             status_display = get_notification_status_display()
             return message, status_display
         
@@ -510,7 +522,8 @@ with gr.Blocks(
                 wxpusher_switch,
                 pushplus_switch,
                 resend_switch,
-                telegram_switch
+                telegram_switch,
+                qq_email_switch
             ],
             outputs=[notification_status, notification_status_display]
         )

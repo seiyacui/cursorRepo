@@ -1,5 +1,5 @@
 """
-通知服务模块 - 支持4种通知渠道
+通知服务模块 - 支持5种通知渠道
 基于参考代码实现
 """
 import requests
@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 from dotenv import load_dotenv
 from notification_config import notification_config
+from qq_email_service import qq_email_service
 
 load_dotenv()
 
@@ -266,6 +267,55 @@ class NotificationService:
         
         print(f"📊 通知发送完成: 成功 {success_count}, 失败 {failed_count}, 跳过 {skipped_count}")
         return results
+    
+    def send_image_generation_notification_with_qq(self, image_data):
+        """
+        发送图片生成通知（包括QQ邮箱）
+        
+        Args:
+            image_data: 包含图片信息的字典
+        """
+        print("📢 开始发送通知...")
+        
+        # 检查总开关
+        if not notification_config.is_enabled():
+            print("🔕 通知总开关已关闭")
+            return
+        
+        # 准备通知内容
+        title = "🎨 图片生成成功"
+        content = f"""
+### 图片生成完成
+
+📝 **提示词**: {image_data.get('prompt', 'N/A')[:100]}{'...' if len(image_data.get('prompt', '')) > 100 else ''}
+
+📁 **文件路径**: `{image_data.get('image_path', 'N/A')}`
+
+📐 **图片尺寸**: {image_data.get('image_dimensions', '未知')}
+
+📊 **文件大小**: {self.format_size(image_data.get('file_size', 0))}
+
+⏱️  **生成耗时**: {image_data.get('generation_time', 'N/A')}
+
+🔢 **推理步数**: {image_data.get('num_inference_steps', 'N/A')}
+
+📈 **引导比例**: {image_data.get('guidance_scale', 'N/A')}
+"""
+        
+        # 发送到传统4个渠道
+        self._send_notification(title, content, image_data)
+        
+        # 发送到QQ邮箱
+        if notification_config.is_channel_enabled('qq_email'):
+            print("📮 发送QQ邮件通知...")
+            try:
+                result = qq_email_service.send_image_notification(image_data)
+                if result['success']:
+                    print(f"   ✅ QQ Email: {result['message']}")
+                else:
+                    print(f"   ❌ QQ Email: {result['message']}")
+            except Exception as e:
+                print(f"   ❌ QQ Email发送失败: {e}")
 
 # 创建全局实例
 notification_service = NotificationService()
