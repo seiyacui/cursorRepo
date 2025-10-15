@@ -397,10 +397,12 @@ with gr.Blocks(
         export_status = gr.Textbox(label="导出状态")
     
     with gr.Tab("🔔 通知设置"):
-        gr.Markdown("### 📢 通知开关控制")
+        gr.Markdown("### 📢 通知配置中心")
+        gr.Markdown("所有凭证信息都保存在本地配置文件中（`notification_config.json`），无需修改 .env 文件")
         
         # 加载当前配置
         current_config = notification_config.load_config()
+        current_creds = current_config.get('credentials', {})
         
         with gr.Row():
             with gr.Column(scale=1):
@@ -414,43 +416,113 @@ with gr.Blocks(
                 )
                 
                 gr.Markdown("---")
-                gr.Markdown("#### 📡 渠道开关")
-                gr.Markdown("*需先启用总开关才能生效*")
+                gr.Markdown("#### 📡 渠道开关与凭证配置")
+                gr.Markdown("*配置凭证后，启用对应开关即可使用*")
                 
-                wxpusher_switch = gr.Checkbox(
-                    label="WxPusher（微信推送）",
-                    value=current_config.get('channels', {}).get('wxpusher', True),
-                    interactive=True
-                )
+                # WxPusher
+                with gr.Accordion("📱 WxPusher（微信推送）", open=False):
+                    wxpusher_switch = gr.Checkbox(
+                        label="启用 WxPusher",
+                        value=current_config.get('channels', {}).get('wxpusher', True)
+                    )
+                    wxpusher_token = gr.Textbox(
+                        label="AppToken",
+                        value=current_creds.get('wxpusher', {}).get('token', ''),
+                        placeholder="输入您的 WxPusher AppToken"
+                    )
+                    wxpusher_uid = gr.Textbox(
+                        label="UID",
+                        value=current_creds.get('wxpusher', {}).get('uid', ''),
+                        placeholder="输入您的 WxPusher UID"
+                    )
+                    gr.Markdown("获取凭证: [WxPusher官网](https://wxpusher.zjiecode.com/)")
                 
-                pushplus_switch = gr.Checkbox(
-                    label="PushPlus（微信推送）",
-                    value=current_config.get('channels', {}).get('pushplus', True),
-                    interactive=True
-                )
+                # PushPlus
+                with gr.Accordion("📲 PushPlus（微信推送）", open=False):
+                    pushplus_switch = gr.Checkbox(
+                        label="启用 PushPlus",
+                        value=current_config.get('channels', {}).get('pushplus', True)
+                    )
+                    pushplus_token = gr.Textbox(
+                        label="Token",
+                        value=current_creds.get('pushplus', {}).get('token', ''),
+                        placeholder="输入您的 PushPlus Token"
+                    )
+                    gr.Markdown("获取凭证: [PushPlus官网](http://www.pushplus.plus/)")
                 
-                resend_switch = gr.Checkbox(
-                    label="Resend Email（邮件通知）",
-                    value=current_config.get('channels', {}).get('resend', True),
-                    interactive=True
-                )
+                # Resend Email
+                with gr.Accordion("📧 Resend Email（国际邮件）", open=False):
+                    resend_switch = gr.Checkbox(
+                        label="启用 Resend Email",
+                        value=current_config.get('channels', {}).get('resend', True)
+                    )
+                    resend_api_key = gr.Textbox(
+                        label="API Key",
+                        value=current_creds.get('resend', {}).get('api_key', ''),
+                        placeholder="输入您的 Resend API Key",
+                        type="password"
+                    )
+                    resend_to_email = gr.Textbox(
+                        label="收件人邮箱",
+                        value=current_creds.get('resend', {}).get('to_email', ''),
+                        placeholder="your_email@example.com"
+                    )
+                    gr.Markdown("获取凭证: [Resend官网](https://resend.com/)")
                 
-                telegram_switch = gr.Checkbox(
-                    label="Telegram（Telegram机器人）",
-                    value=current_config.get('channels', {}).get('telegram', True),
-                    interactive=True
-                )
+                # Telegram
+                with gr.Accordion("✈️ Telegram（TG机器人）", open=False):
+                    telegram_switch = gr.Checkbox(
+                        label="启用 Telegram",
+                        value=current_config.get('channels', {}).get('telegram', True)
+                    )
+                    telegram_bot_token = gr.Textbox(
+                        label="Bot Token",
+                        value=current_creds.get('telegram', {}).get('bot_token', ''),
+                        placeholder="输入您的 Telegram Bot Token",
+                        type="password"
+                    )
+                    telegram_chat_id = gr.Textbox(
+                        label="Chat ID",
+                        value=current_creds.get('telegram', {}).get('chat_id', ''),
+                        placeholder="输入您的 Telegram Chat ID"
+                    )
+                    gr.Markdown("获取凭证: [创建Bot](https://t.me/BotFather)")
                 
-                qq_email_switch = gr.Checkbox(
-                    label="QQ Email（QQ邮箱，支持多收件人）",
-                    value=current_config.get('channels', {}).get('qq_email', True),
-                    interactive=True,
-                    info="基于SMTP，支持同时发送给多个收件人"
-                )
+                # QQ Email
+                with gr.Accordion("📮 QQ Email（QQ邮箱，支持多收件人）", open=False):
+                    qq_email_switch = gr.Checkbox(
+                        label="启用 QQ Email",
+                        value=current_config.get('channels', {}).get('qq_email', True)
+                    )
+                    qq_email_user = gr.Textbox(
+                        label="QQ邮箱地址",
+                        value=current_creds.get('qq_email', {}).get('user', ''),
+                        placeholder="your_email@qq.com"
+                    )
+                    qq_email_password = gr.Textbox(
+                        label="授权码（不是密码！）",
+                        value=current_creds.get('qq_email', {}).get('password', ''),
+                        placeholder="16位授权码",
+                        type="password"
+                    )
+                    qq_email_from_name = gr.Textbox(
+                        label="发件人名称",
+                        value=current_creds.get('qq_email', {}).get('from_name', '文本转图片生成器'),
+                        placeholder="文本转图片生成器"
+                    )
+                    qq_email_recipients = gr.Textbox(
+                        label="收件人列表（逗号分隔）",
+                        value=current_creds.get('qq_email', {}).get('recipients', ''),
+                        placeholder="user1@gmail.com,user2@qq.com,user3@163.com",
+                        lines=2
+                    )
+                    gr.Markdown("⚠️ 授权码获取: QQ邮箱 → 设置 → 账户 → POP3/SMTP → 生成授权码")
+                
+                gr.Markdown("---")
                 
                 with gr.Row():
                     save_notification_btn = gr.Button(
-                        "💾 保存设置",
+                        "💾 保存所有设置",
                         variant="primary",
                         size="lg"
                     )
