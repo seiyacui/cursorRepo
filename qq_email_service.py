@@ -122,7 +122,10 @@ class QQEmailService:
                 msg.attach(text_part)
             
             # 连接SMTP服务器并发送
-            with smtplib.SMTP_SSL(self.host, self.port) as server:
+            import ssl
+            context = ssl.create_default_context()
+            
+            with smtplib.SMTP_SSL(self.host, self.port, timeout=10, context=context) as server:
                 server.login(self.user, self.password)
                 server.sendmail(self.user, recipients, msg.as_string())
             
@@ -299,7 +302,11 @@ class QQEmailService:
     def test_connection(self):
         """测试邮件服务连接"""
         try:
-            with smtplib.SMTP_SSL(self.host, self.port, timeout=10) as server:
+            import ssl
+            # 创建SSL上下文
+            context = ssl.create_default_context()
+            
+            with smtplib.SMTP_SSL(self.host, self.port, timeout=10, context=context) as server:
                 server.login(self.user, self.password)
             print("✅ QQ Email service connection verified")
             return True
