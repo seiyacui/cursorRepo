@@ -510,8 +510,43 @@ with gr.Blocks(
                 )
         
         # 保存通知设置
-        def save_notification_settings(master, wx, pp, rs, tg, qq):
-            success, message = notification_config.save_config(master, wx, pp, rs, tg, qq)
+        def save_notification_settings(
+            master, 
+            wx_enabled, wx_token, wx_uid,
+            pp_enabled, pp_token,
+            rs_enabled, rs_api_key, rs_to_email,
+            tg_enabled, tg_bot_token, tg_chat_id,
+            qq_enabled, qq_user, qq_password, qq_from_name, qq_recipients
+        ):
+            """保存通知配置和凭证"""
+            # 构建凭证字典
+            credentials = {
+                'wxpusher': {'token': wx_token, 'uid': wx_uid},
+                'pushplus': {'token': pp_token},
+                'resend': {'api_key': rs_api_key, 'to_email': rs_to_email},
+                'telegram': {'bot_token': tg_bot_token, 'chat_id': tg_chat_id},
+                'qq_email': {
+                    'user': qq_user, 
+                    'password': qq_password, 
+                    'from_name': qq_from_name, 
+                    'recipients': qq_recipients
+                }
+            }
+            
+            # 保存配置
+            success, message = notification_config.save_config(
+                master, wx_enabled, pp_enabled, rs_enabled, tg_enabled, qq_enabled, 
+                credentials
+            )
+            
+            # 重新加载凭证到通知服务
+            notification_service.reload_credentials()
+            
+            # 更新QQ邮箱服务配置
+            from qq_email_service import qq_email_service
+            qq_email_service.update_config(qq_user, qq_password, qq_from_name, qq_recipients)
+            
+            # 更新状态显示
             status_display = get_notification_status_display()
             return message, status_display
         
@@ -519,11 +554,11 @@ with gr.Blocks(
             fn=save_notification_settings,
             inputs=[
                 notification_master_switch,
-                wxpusher_switch,
-                pushplus_switch,
-                resend_switch,
-                telegram_switch,
-                qq_email_switch
+                wxpusher_switch, wxpusher_token, wxpusher_uid,
+                pushplus_switch, pushplus_token,
+                resend_switch, resend_api_key, resend_to_email,
+                telegram_switch, telegram_bot_token, telegram_chat_id,
+                qq_email_switch, qq_email_user, qq_email_password, qq_email_from_name, qq_email_recipients
             ],
             outputs=[notification_status, notification_status_display]
         )

@@ -18,15 +18,40 @@ class QQEmailService:
         """初始化QQ邮箱配置"""
         self.host = 'smtp.qq.com'
         self.port = 465
-        self.user = os.getenv('QQ_EMAIL_USER', '2882465@qq.com')
-        self.password = os.getenv('QQ_EMAIL_PASSWORD', '')  # QQ邮箱授权码
-        self.from_name = os.getenv('QQ_EMAIL_FROM_NAME', '文本转图片生成器')
-        
-        # 收件人列表（从环境变量读取，逗号分隔）
-        recipients = os.getenv('QQ_EMAIL_RECIPIENTS', '')
-        self.default_recipients = [r.strip() for r in recipients.split(',') if r.strip()]
-        
+        self._load_config()
         self._initialized = False
+        self.initialize()
+    
+    def _load_config(self):
+        """从配置文件或环境变量加载配置"""
+        from notification_config import notification_config
+        
+        # 优先从配置文件读取
+        creds = notification_config.get_credentials('qq_email')
+        
+        self.user = creds.get('user') or os.getenv('QQ_EMAIL_USER', '')
+        self.password = creds.get('password') or os.getenv('QQ_EMAIL_PASSWORD', '')
+        self.from_name = creds.get('from_name') or os.getenv('QQ_EMAIL_FROM_NAME', '文本转图片生成器')
+        
+        # 收件人列表
+        recipients_str = creds.get('recipients') or os.getenv('QQ_EMAIL_RECIPIENTS', '')
+        self.default_recipients = [r.strip() for r in recipients_str.split(',') if r.strip()]
+    
+    def update_config(self, user=None, password=None, from_name=None, recipients=None):
+        """更新配置"""
+        if user is not None:
+            self.user = user
+        if password is not None:
+            self.password = password
+        if from_name is not None:
+            self.from_name = from_name
+        if recipients is not None:
+            if isinstance(recipients, str):
+                self.default_recipients = [r.strip() for r in recipients.split(',') if r.strip()]
+            else:
+                self.default_recipients = recipients
+        
+        # 重新初始化
         self.initialize()
     
     def initialize(self):

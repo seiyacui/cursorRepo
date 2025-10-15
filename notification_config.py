@@ -13,16 +13,23 @@ class NotificationConfig:
     
     def __init__(self):
         self.config_path = Path(self.CONFIG_FILE)
-            self.default_config = {
-                'enabled': True,  # 总开关
-                'channels': {
-                    'wxpusher': True,
-                    'pushplus': True,
-                    'resend': True,
-                    'telegram': True,
-                    'qq_email': True  # QQ邮箱
-                }
+        self.default_config = {
+            'enabled': True,  # 总开关
+            'channels': {
+                'wxpusher': True,
+                'pushplus': True,
+                'resend': True,
+                'telegram': True,
+                'qq_email': True  # QQ邮箱
+            },
+            'credentials': {  # 凭证配置
+                'wxpusher': {'token': '', 'uid': ''},
+                'pushplus': {'token': ''},
+                'resend': {'api_key': '', 'to_email': ''},
+                'telegram': {'bot_token': '', 'chat_id': ''},
+                'qq_email': {'user': '', 'password': '', 'from_name': '文本转图片生成器', 'recipients': ''}
             }
+        }
     
     def load_config(self):
         """加载配置"""
@@ -41,7 +48,7 @@ class NotificationConfig:
                 return self.default_config.copy()
         return self.default_config.copy()
     
-    def save_config(self, enabled, wxpusher, pushplus, resend, telegram, qq_email):
+    def save_config(self, enabled, wxpusher, pushplus, resend, telegram, qq_email, credentials=None):
         """
         保存配置
         
@@ -52,7 +59,11 @@ class NotificationConfig:
             resend: Resend Email 开关
             telegram: Telegram 开关
             qq_email: QQ Email 开关
+            credentials: 凭证信息字典（可选）
         """
+        # 加载现有配置
+        current_config = self.load_config()
+        
         config = {
             'enabled': enabled,
             'channels': {
@@ -61,7 +72,8 @@ class NotificationConfig:
                 'resend': resend,
                 'telegram': telegram,
                 'qq_email': qq_email
-            }
+            },
+            'credentials': credentials if credentials else current_config.get('credentials', self.default_config['credentials'])
         }
         
         try:
@@ -70,6 +82,19 @@ class NotificationConfig:
             return True, "✅ 配置保存成功！"
         except Exception as e:
             return False, f"❌ 配置保存失败: {e}"
+    
+    def get_credentials(self, channel):
+        """
+        获取指定渠道的凭证
+        
+        Args:
+            channel: 渠道名称
+        
+        Returns:
+            dict: 凭证信息
+        """
+        config = self.load_config()
+        return config.get('credentials', {}).get(channel, {})
     
     def is_enabled(self):
         """检查通知是否启用（总开关）"""

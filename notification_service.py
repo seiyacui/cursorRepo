@@ -16,24 +16,57 @@ class NotificationService:
     """通知服务类"""
     
     def __init__(self):
-        # 从环境变量获取通知凭证
-        self.config = {
-            'wxpusher': {
+        # 从配置文件获取通知凭证（优先），环境变量作为后备
+        self.config = self._load_credentials()
+    
+    def _load_credentials(self):
+        """从配置文件或环境变量加载凭证"""
+        # 优先从配置文件读取
+        credentials = {
+            'wxpusher': notification_config.get_credentials('wxpusher'),
+            'pushplus': notification_config.get_credentials('pushplus'),
+            'resend': notification_config.get_credentials('resend'),
+            'telegram': notification_config.get_credentials('telegram'),
+            'qq_email': notification_config.get_credentials('qq_email')
+        }
+        
+        # 如果配置文件中没有，从环境变量读取（向后兼容）
+        if not credentials['wxpusher'].get('token'):
+            credentials['wxpusher'] = {
                 'token': os.getenv('WXPUSHER_TOKEN', ''),
                 'uid': os.getenv('WXPUSHER_UID', '')
-            },
-            'pushplus': {
+            }
+        
+        if not credentials['pushplus'].get('token'):
+            credentials['pushplus'] = {
                 'token': os.getenv('PUSHPLUS_TOKEN', '')
-            },
-            'resend': {
+            }
+        
+        if not credentials['resend'].get('api_key'):
+            credentials['resend'] = {
                 'api_key': os.getenv('RESEND_API_KEY', ''),
                 'to_email': os.getenv('RESEND_TO_EMAIL', '')
-            },
-            'telegram': {
+            }
+        
+        if not credentials['telegram'].get('bot_token'):
+            credentials['telegram'] = {
                 'bot_token': os.getenv('TELEGRAM_BOT_TOKEN', ''),
                 'chat_id': os.getenv('TELEGRAM_CHAT_ID', '')
             }
-        }
+        
+        if not credentials['qq_email'].get('user'):
+            credentials['qq_email'] = {
+                'user': os.getenv('QQ_EMAIL_USER', ''),
+                'password': os.getenv('QQ_EMAIL_PASSWORD', ''),
+                'from_name': os.getenv('QQ_EMAIL_FROM_NAME', '文本转图片生成器'),
+                'recipients': os.getenv('QQ_EMAIL_RECIPIENTS', '')
+            }
+        
+        return credentials
+    
+    def reload_credentials(self):
+        """重新加载凭证"""
+        self.config = self._load_credentials()
     
     def format_size(self, size_bytes):
         """格式化文件大小"""
