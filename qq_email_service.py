@@ -101,29 +101,36 @@ class QQEmailService:
                     'message': '收件人列表为空'
                 }
             
-            # 使用最简单的方式创建邮件
+            # 创建邮件对象 - 支持同时发送文本和HTML
             from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
             
-            # 选择内容
-            content = html if html else (text or '')
-            content_type = 'html' if html else 'plain'
+            if text and html:
+                # 同时提供文本和HTML，使用 multipart
+                msg = MIMEMultipart('alternative')
+                msg.attach(MIMEText(text, 'plain', 'utf-8'))
+                msg.attach(MIMEText(html, 'html', 'utf-8'))
+            elif html:
+                # 只有HTML
+                msg = MIMEText(html, 'html', 'utf-8')
+            else:
+                # 只有文本
+                msg = MIMEText(text or '', 'plain', 'utf-8')
             
-            # 创建邮件
-            msg = MIMEText(content, content_type, 'utf-8')
+            # 设置邮件头
             msg['Subject'] = subject
-            msg['From'] = self.user  # 简化：只用邮箱地址
-            msg['To'] = recipients[0] if len(recipients) == 1 else ', '.join(recipients)
+            msg['From'] = f'{self.from_name} <{self.user}>'
+            msg['To'] = ', '.join(recipients)
             
             # 使用与 test_connection 完全相同的连接方式
             import ssl
             context = ssl.create_default_context()
             
-            # 创建新的连接并发送
+            # 创建连接并发送
             server = smtplib.SMTP_SSL(self.host, self.port, timeout=10, context=context)
             try:
                 server.login(self.user, self.password)
                 server.sendmail(self.user, recipients, msg.as_string())
-                server.quit()
                 
                 print(f"✅ QQ Email sent successfully to: {', '.join(recipients)}")
                 return {
@@ -131,6 +138,7 @@ class QQEmailService:
                     'message': f'邮件发送成功: {", ".join(recipients)}'
                 }
             finally:
+                # 安全地关闭连接，忽略可能的错误
                 try:
                     server.quit()
                 except:
@@ -139,9 +147,6 @@ class QQEmailService:
         except Exception as error:
             error_msg = f"Failed to send QQ email: {str(error)}"
             print(f"❌ {error_msg}")
-            print(f"   详细错误: {type(error).__name__}: {error}")
-            import traceback
-            traceback.print_exc()
             return {
                 'success': False,
                 'message': error_msg
