@@ -103,9 +103,9 @@ class QQEmailService:
             
             # 创建邮件对象
             msg = MIMEMultipart('alternative')
-            msg['From'] = Header(f'{self.from_name} <{self.user}>', 'utf-8')
-            msg['To'] = Header(', '.join(recipients), 'utf-8')
-            msg['Subject'] = Header(subject, 'utf-8')
+            msg['From'] = f'{self.from_name} <{self.user}>'
+            msg['To'] = ', '.join(recipients)
+            msg['Subject'] = subject
             
             # 添加纯文本内容
             if text:
@@ -127,7 +127,8 @@ class QQEmailService:
             
             with smtplib.SMTP_SSL(self.host, self.port, timeout=10, context=context) as server:
                 server.login(self.user, self.password)
-                server.sendmail(self.user, recipients, msg.as_string())
+                # 使用 send_message 方法，它会自动处理编码
+                server.send_message(msg)
             
             print(f"✅ QQ Email sent successfully to: {', '.join(recipients)}")
             return {
