@@ -101,44 +101,47 @@ class QQEmailService:
                     'message': '收件人列表为空'
                 }
             
-            # 创建邮件对象
-            msg = MIMEMultipart('alternative')
-            msg['From'] = f'{self.from_name} <{self.user}>'
-            msg['To'] = ', '.join(recipients)
+            # 使用最简单的方式创建邮件
+            from email.mime.text import MIMEText
+            
+            # 选择内容
+            content = html if html else (text or '')
+            content_type = 'html' if html else 'plain'
+            
+            # 创建邮件
+            msg = MIMEText(content, content_type, 'utf-8')
             msg['Subject'] = subject
+            msg['From'] = self.user  # 简化：只用邮箱地址
+            msg['To'] = recipients[0] if len(recipients) == 1 else ', '.join(recipients)
             
-            # 添加纯文本内容
-            if text:
-                text_part = MIMEText(text, 'plain', 'utf-8')
-                msg.attach(text_part)
-            
-            # 添加HTML内容
-            if html:
-                html_part = MIMEText(html, 'html', 'utf-8')
-                msg.attach(html_part)
-            elif not text:
-                # 如果既没有text也没有html，使用空文本
-                text_part = MIMEText('', 'plain', 'utf-8')
-                msg.attach(text_part)
-            
-            # 连接SMTP服务器并发送
+            # 使用与 test_connection 完全相同的连接方式
             import ssl
             context = ssl.create_default_context()
             
-            with smtplib.SMTP_SSL(self.host, self.port, timeout=10, context=context) as server:
+            # 创建新的连接并发送
+            server = smtplib.SMTP_SSL(self.host, self.port, timeout=10, context=context)
+            try:
                 server.login(self.user, self.password)
-                # 使用 send_message 方法，它会自动处理编码
-                server.send_message(msg)
-            
-            print(f"✅ QQ Email sent successfully to: {', '.join(recipients)}")
-            return {
-                'success': True,
-                'message': f'邮件发送成功: {", ".join(recipients)}'
-            }
+                server.sendmail(self.user, recipients, msg.as_string())
+                server.quit()
+                
+                print(f"✅ QQ Email sent successfully to: {', '.join(recipients)}")
+                return {
+                    'success': True,
+                    'message': f'邮件发送成功: {", ".join(recipients)}'
+                }
+            finally:
+                try:
+                    server.quit()
+                except:
+                    pass
             
         except Exception as error:
             error_msg = f"Failed to send QQ email: {str(error)}"
             print(f"❌ {error_msg}")
+            print(f"   详细错误: {type(error).__name__}: {error}")
+            import traceback
+            traceback.print_exc()
             return {
                 'success': False,
                 'message': error_msg
