@@ -9,7 +9,7 @@ from PIL import Image
 import time
 from datetime import datetime
 from dotenv import load_dotenv
-from logger_config import setup_logger, log_generation_start, log_generation_success, log_generation_error
+from app_logger import setup_logger, log_generation_start, log_generation_success, log_generation_error
 
 load_dotenv()
 

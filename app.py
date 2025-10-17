@@ -12,7 +12,7 @@ from database.db_manager import DatabaseManager
 from export_manager import ExportManager
 from notification_service import notification_service
 from notification_config import notification_config
-from logger_config import (
+from app_logger import (
     setup_logger, log_section, log_separator, 
     log_database_operation, log_notification_status
 )
