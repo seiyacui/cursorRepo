@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube视频批量下载器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <h1>🎬 YouTube视频批量下载器</h1>
+            <p>支持批量下载YouTube视频和音频，实时进度显示，数据导出</p>
+        </header>
+
+        <!-- 主要内容区域 -->
+        <main class="main-content">
+            <!-- 下载配置面板 -->
+            <section class="download-panel">
+                <h2>📥 下载配置</h2>
+                
+                <!-- 视频URL输入 -->
+                <div class="form-group">
+                    <label for="videoUrls">YouTube视频地址列表 <span class="required">*</span></label>
+                    <textarea 
+                        id="videoUrls" 
+                        placeholder="请输入YouTube视频地址，每行一个：&#10;https://www.youtube.com/watch?v=example1&#10;https://www.youtube.com/watch?v=example2&#10;https://youtu.be/example3"
+                        rows="6"
+                    ></textarea>
+                    <small class="help-text">支持多种YouTube URL格式，每行一个地址</small>
+                </div>
+
+                <!-- 视频格式选择 -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="videoFormat">视频格式</label>
+                        <select id="videoFormat">
+                            <option value="mp4">MP4 (推荐)</option>
+                            <option value="mkv">MKV</option>
+                            <option value="webm">WebM</option>
+                            <option value="avi">AVI</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="videoQuality">视频质量</label>
+                        <select id="videoQuality">
+                            <option value="best">最佳质量</option>
+                            <option value="1080p">1080p</option>
+                            <option value="720p">720p</option>
+                            <option value="480p">480p</option>
+                            <option value="worst">最低质量</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 音频下载选项 -->
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="downloadAudio">
+                        <label for="downloadAudio">同时下载音频文件</label>
+                    </div>
+                </div>
+
+                <div class="form-row audio-options" style="display: none;">
+                    <div class="form-group">
+                        <label for="audioFormat">音频格式</label>
+                        <select id="audioFormat">
+                            <option value="mp3">MP3 (推荐)</option>
+                            <option value="aac">AAC</option>
+                            <option value="wav">WAV</option>
+                            <option value="flac">FLAC</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="audioQuality">音频质量</label>
+                        <select id="audioQuality">
+                            <option value="0">最佳音质</option>
+                            <option value="5">高音质</option>
+                            <option value="9">标准音质</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 下载按钮 -->
+                <div class="form-actions">
+                    <button id="startDownload" class="btn btn-primary">
+                        <span class="btn-icon">🚀</span>
+                        开始批量下载
+                    </button>
+                    <button id="stopDownload" class="btn btn-secondary" style="display: none;">
+                        <span class="btn-icon">⏹️</span>
+                        停止下载
+                    </button>
+                </div>
+            </section>
+
+            <!-- 进度显示面板 -->
+            <section class="progress-panel" style="display: none;">
+                <h2>📊 下载进度</h2>
+                
+                <div class="progress-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">总数:</span>
+                        <span id="totalCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">已完成:</span>
+                        <span id="completedCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">失败:</span>
+                        <span id="failedCount">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">耗时:</span>
+                        <span id="elapsedTime">00:00</span>
+                    </div>
+                </div>
+
+                <div class="progress-bar-container">
+                    <div class="progress-bar">
+                        <div id="progressBar" class="progress-fill"></div>
+                    </div>
+                    <span id="progressText">0%</span>
+                </div>
+
+                <div class="current-download">
+                    <div id="currentVideo">准备开始下载...</div>
+                </div>
+            </section>
+
+            <!-- 下载报告面板 -->
+            <section class="report-panel" style="display: none;">
+                <h2>📋 下载报告</h2>
+                <div id="downloadReport"></div>
+                <div class="report-actions">
+                    <button id="downloadFiles" class="btn btn-success">
+                        <span class="btn-icon">📦</span>
+                        下载文件
+                    </button>
+                    <button id="newDownload" class="btn btn-primary">
+                        <span class="btn-icon">🆕</span>
+                        新建下载
+                    </button>
+                </div>
+            </section>
+
+            <!-- 视频列表面板 -->
+            <section class="video-list-panel">
+                <div class="panel-header">
+                    <h2>📚 视频库</h2>
+                    <div class="panel-actions">
+                        <button id="refreshList" class="btn btn-outline">
+                            <span class="btn-icon">🔄</span>
+                            刷新
+                        </button>
+                        <button id="exportData" class="btn btn-outline">
+                            <span class="btn-icon">📤</span>
+                            导出数据
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 搜索和筛选 -->
+                <div class="search-panel">
+                    <div class="search-row">
+                        <div class="search-group">
+                            <input type="text" id="searchKeyword" placeholder="搜索标题、文件名或上传者...">
+                            <button id="searchBtn" class="btn btn-outline">🔍 搜索</button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="dateFrom">开始日期:</label>
+                            <input type="date" id="dateFrom">
+                        </div>
+                        <div class="filter-group">
+                            <label for="dateTo">结束日期:</label>
+                            <input type="date" id="dateTo">
+                        </div>
+                        <div class="filter-group">
+                            <button id="clearFilters" class="btn btn-outline">清除筛选</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 视频列表 -->
+                <div class="video-list">
+                    <div class="list-header">
+                        <div class="header-cell">缩略图</div>
+                        <div class="header-cell">标题</div>
+                        <div class="header-cell">格式</div>
+                        <div class="header-cell">时长</div>
+                        <div class="header-cell">大小</div>
+                        <div class="header-cell">状态</div>
+                        <div class="header-cell">创建时间</div>
+                        <div class="header-cell">操作</div>
+                    </div>
+                    
+                    <div id="videoListContent">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+
+                <!-- 分页 -->
+                <div class="pagination">
+                    <button id="prevPage" class="btn btn-outline">上一页</button>
+                    <span id="pageInfo">第 1 页，共 1 页</span>
+                    <button id="nextPage" class="btn btn-outline">下一页</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- 统计面板 -->
+        <aside class="stats-panel">
+            <h3>📈 统计信息</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalVideos">0</div>
+                    <div class="stat-label">总视频数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="completedVideos">0</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalSize">0 MB</div>
+                    <div class="stat-label">总大小</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgDuration">0:00</div>
+                    <div class="stat-label">平均时长</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- 导出模态框 -->
+    <div id="exportModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📤 导出数据</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="export-options">
+                    <h4>选择导出格式:</h4>
+                    <div class="format-options">
+                        <label class="format-option">
+                            <input type="radio" name="exportFormat" value="html" checked>
+                            <span class="format-icon">🌐</span>
+                            <span class="format-name">HTML</span>
+                        </label>
+                        <label class="format-option">
+                            <input type="radio" name="exportFormat" value="pdf">
+                            <span class="format-icon">📄</span>
+                            <span class="format-name">PDF</span>
+                        </label>
+                        <label class="format-option">
+                            <input type="radio" name="exportFormat" value="markdown">
+                            <span class="format-icon">📝</span>
+                            <span class="format-name">Markdown</span>
+                        </label>
+                        <label class="format-option">
+                            <input type="radio" name="exportFormat" value="png">
+                            <span class="format-icon">🖼️</span>
+                            <span class="format-name">PNG图片</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="export-options">
+                    <h4>导出内容:</h4>
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="exportAll" checked>
+                        导出所有数据
+                    </label>
+                    <label class="checkbox-option">
+                        <input type="checkbox" id="exportFiltered">
+                        仅导出当前筛选结果
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirmExport" class="btn btn-primary">开始导出</button>
+                <button id="cancelExport" class="btn btn-secondary">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast通知 -->
+    <div id="toast" class="toast"></div>
+
+    <!-- 脚本 -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
