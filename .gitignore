@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# 环境配置
+.env
+
+# 输出文件
+outputs/
+exports/
+*.png
+*.jpg
+*.jpeg
+*.xlsx
+
+# 排除导出的 HTML/TXT/MD 文件，但保留项目文档
+exports/*.html
+exports/*.txt
+exports/*.md
+
+# 保留重要的项目文件
+!requirements.txt
+!README.md
+!QUICKSTART.md
+!WELCOME.md
+!PROJECT_SUMMARY.md
+!TESTING_GUIDE.md
+!PROJECT_DELIVERY.txt
+
+# 保留通知配置文件（运行时生成的用户配置）
+# notification_config.json 不提交，每个用户有自己的设置
+
+# 日志文件
+logs/
+*.log
+
+# 数据库
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# HuggingFace 缓存（已在其他位置）
+.cache/
