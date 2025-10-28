@@ -1,0 +1,207 @@
+YouTube 批量下载器 & 管理器 - 项目结构
+═══════════════════════════════════════════════════════
+
+youtube-batch-downloader/
+│
+├── 📁 db/                          数据库模块
+│   ├── database.js                 PostgreSQL 连接池配置
+│   ├── schema.sql                  数据库表结构定义
+│   └── init.js                     数据库初始化脚本
+│
+├── 📁 services/                    业务服务模块
+│   ├── downloader.js               YouTube 视频下载服务
+│   │                               - 调用 yt-dlp 命令行工具
+│   │                               - 实时进度解析和广播
+│   │                               - 视频/音频格式处理
+│   │
+│   ├── notification.js             多渠道通知服务
+│   │                               - WxPusher (微信推送)
+│   │                               - PushPlus (推送加)
+│   │                               - Resend Email (邮件)
+│   │                               - Telegram (电报)
+│   │
+│   ├── exporter.js                 多格式导出服务
+│   │                               - HTML 导出
+│   │                               - PDF 导出 (html-pdf-node)
+│   │                               - Markdown 导出
+│   │                               - PNG 导出 (puppeteer)
+│   │
+│   └── websocket.js                WebSocket 实时通信
+│                                   - 连接管理
+│                                   - 消息广播
+│                                   - 客户端通知
+│
+├── 📁 public/                      前端静态文件
+│   ├── index.html                  主页面
+│   │                               - 批量输入区域
+│   │                               - 格式选择控件
+│   │                               - 搜索筛选区域
+│   │                               - 视频列表表格
+│   │                               - 统计信息展示
+│   │
+│   ├── styles.css                  样式表
+│   │                               - 紫色渐变主题
+│   │                               - 响应式布局
+│   │                               - 动画效果
+│   │                               - 表格样式
+│   │
+│   └── app.js                      前端逻辑
+│                                   - WebSocket 客户端
+│                                   - AJAX 请求封装
+│                                   - 实时进度更新
+│                                   - 表格渲染
+│                                   - 导出功能
+│
+├── 📁 downloads/                   视频下载目录
+│   └── (下载的视频和音频文件)
+│
+├── 📁 exports/                     导出文件目录
+│   └── (生成的 HTML/PDF/Markdown/PNG 文件)
+│
+├── 📄 server.js                    Express 主服务器
+│                                   - API 路由定义
+│                                   - 中间件配置
+│                                   - WebSocket 初始化
+│                                   - 静态文件服务
+│
+├── 📄 package.json                 Node.js 项目配置
+│                                   - 依赖包列表
+│                                   - 启动脚本
+│                                   - 项目元信息
+│
+├── 📄 .env.example                 环境变量模板
+│                                   - 数据库配置
+│                                   - 通知渠道配置
+│                                   - 服务器配置
+│
+├── 📄 .gitignore                   Git 忽略配置
+│                                   - node_modules/
+│                                   - .env
+│                                   - downloads/
+│
+├── 📚 文档文件
+│   ├── README.md                   项目介绍 (英文)
+│   ├── README_ZH.md                项目介绍 (中文)
+│   ├── QUICKSTART.md               快速启动指南
+│   ├── INSTALLATION.md             详细安装文档
+│   ├── PROJECT_SUMMARY.md          项目总结报告
+│   └── PROJECT_STRUCTURE.txt       本文件
+│
+└── 📄 notification.js.reference    原始参考文件 (备份)
+
+
+API 接口列表
+═══════════════════════════════════════════════════════
+
+GET     /                           主页面
+GET     /api/health                 健康检查
+POST    /api/download/batch         批量下载
+GET     /api/videos                 获取视频列表 (支持搜索)
+GET     /api/videos/:id             获取单个视频
+DELETE  /api/videos/:id             删除视频
+POST    /api/export                 导出列表
+GET     /api/stats                  获取统计信息
+
+WebSocket: ws://localhost:3000      实时通信
+
+
+数据库表结构
+═══════════════════════════════════════════════════════
+
+videos 表:
+- id                 (主键)
+- url                (YouTube URL)
+- title              (视频标题)
+- filename           (文件名)
+- video_format       (视频格式)
+- audio_format       (音频格式)
+- duration           (时长/秒)
+- video_size         (视频大小/字节)
+- audio_size         (音频大小/字节)
+- video_path         (视频文件路径)
+- audio_path         (音频文件路径)
+- thumbnail_url      (缩略图URL)
+- status             (状态: pending/downloading/completed/failed)
+- progress           (进度: 0-100)
+- error_message      (错误信息)
+- created_at         (创建时间)
+- completed_at       (完成时间)
+
+索引:
+- idx_videos_status
+- idx_videos_created_at
+- idx_videos_title
+- idx_videos_filename
+
+
+技术栈依赖
+═══════════════════════════════════════════════════════
+
+后端核心:
+- express            Web 框架
+- pg                 PostgreSQL 客户端
+- ws                 WebSocket 库
+- dotenv             环境变量管理
+
+功能模块:
+- axios              HTTP 客户端 (通知服务)
+- marked             Markdown 渲染
+- html-pdf-node      PDF 生成
+- puppeteer          网页截图
+
+开发工具:
+- nodemon            开发模式自动重启
+
+系统依赖:
+- Node.js >= 14.x
+- PostgreSQL >= 12.x
+- yt-dlp             YouTube 下载工具
+
+
+功能特性清单
+═══════════════════════════════════════════════════════
+
+✅ 批量下载
+  - 多URL同时输入
+  - 多种视频格式支持
+  - 可选音频分离下载
+  - 实时进度显示
+
+✅ 数据管理
+  - PostgreSQL 持久化存储
+  - 完整元数据记录
+  - 关键字搜索
+  - 时间范围筛选
+  - 状态筛选
+
+✅ 实时交互
+  - WebSocket 双向通信
+  - 进度条实时更新
+  - 下载速度显示
+  - 剩余时间预估
+  - 下载报告生成
+
+✅ 多格式导出
+  - HTML (带样式)
+  - PDF (可打印)
+  - Markdown (可编辑)
+  - PNG (可分享)
+
+✅ 通知推送
+  - WxPusher 微信推送
+  - PushPlus 推送加
+  - Resend 邮件通知
+  - Telegram 机器人
+
+✅ 用户界面
+  - 现代化设计
+  - 响应式布局
+  - 流畅动画
+  - 完整中文支持
+
+
+═══════════════════════════════════════════════════════
+项目开发完成时间: 2024-10-10
+开发状态: ✅ 完成
+需求完成度: 100%
+═══════════════════════════════════════════════════════
